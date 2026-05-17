@@ -127,7 +127,7 @@ const tools = [
     {
         name: "proteus_query_duplicates",
         title: "Query Possible Duplicates",
-        description: "Search SQL memory for prior coverage of an area, candidate, primitive, root cause, or impact claim.",
+        description: "Search ingested findings and reports for possible duplicate prior coverage. Use proteus_query_memory for broad memory search.",
         inputSchema: schema({ root: stringProp("Target root path."), text: stringProp("Candidate text, primitive, or impact to search."), limit: numberProp("Max rows.") }, ["root", "text"]),
         handler: ({ root, text, limit }) => withDb(str(root), (db) => db.queryCoverage(str(text), num(limit, 10)))
     },
@@ -144,6 +144,62 @@ const tools = [
         description: "Return the full SQL memory record for an entityType/entityId pair returned by Proteus queries.",
         inputSchema: schema({ root: stringProp("Target root path."), entityType: stringProp("Entity type."), entityId: numberProp("Entity id.") }, ["root", "entityType", "entityId"]),
         handler: ({ root, entityType, entityId }) => withDb(str(root), (db) => db.getRecord(str(entityType), num(entityId, 0)))
+    },
+    {
+        name: "proteus_list_records",
+        title: "List Memory Records",
+        description: "List structured Proteus records by type: surfaces, hypotheses, evidence, decisions, or gates.",
+        inputSchema: schema({
+            root: stringProp("Target root path."),
+            recordType: stringProp("surfaces, hypotheses, evidence, decisions, or gates."),
+            status: stringProp("Optional status filter for surfaces or hypotheses."),
+            text: stringProp("Optional text filter for surfaces."),
+            entityType: stringProp("Optional entity type filter for gates."),
+            entityId: numberProp("Optional entity id filter for gates."),
+            limit: numberProp("Max rows.")
+        }, ["root", "recordType"]),
+        handler: (input) => withDb(str(input.root), (db) => listRecords(db, str(input.recordType), {
+            status: maybeStr(input.status),
+            text: maybeStr(input.text),
+            entityType: maybeStr(input.entityType),
+            entityId: maybeNum(input.entityId),
+            limit: num(input.limit, 50)
+        }))
+    },
+    {
+        name: "proteus_record_surface",
+        title: "Record Surface",
+        description: "Record a target-specific component, area, or attack surface with files, boundaries, status, and ROI factors.",
+        inputSchema: schema({
+            root: stringProp(),
+            name: stringProp(),
+            family: stringProp(),
+            description: stringProp(),
+            files: arrayProp(),
+            symbols: arrayProp(),
+            entrypoints: arrayProp(),
+            trustBoundaries: arrayProp(),
+            runtimeModes: arrayProp(),
+            status: stringProp(),
+            revisitCondition: stringProp(),
+            roi: objectProp("Optional ROI factor object.")
+        }, ["root", "name"]),
+        handler: (input) => withDb(str(input.root), (db) => ({
+            ok: true,
+            id: db.addSurface({
+                name: str(input.name),
+                family: maybeStr(input.family) ?? "coordinator-supplied",
+                description: maybeStr(input.description) ?? "",
+                files: stringArray(input.files),
+                symbols: stringArray(input.symbols),
+                entrypoints: stringArray(input.entrypoints),
+                trustBoundaries: stringArray(input.trustBoundaries),
+                runtimeModes: stringArray(input.runtimeModes),
+                status: (maybeStr(input.status) ?? "active"),
+                roi: roiFromInput(objectValue(input.roi)),
+                revisitCondition: maybeStr(input.revisitCondition) ?? ""
+            })
+        }))
     },
     {
         name: "proteus_record_hypothesis",
@@ -230,6 +286,33 @@ const tools = [
         }))
     },
     {
+        name: "proteus_record_gate",
+        title: "Record Validation Gate",
+        description: "Record the status of a validation gate for a hypothesis, candidate, report, or other memory entity.",
+        inputSchema: schema({
+            root: stringProp(),
+            entityType: stringProp(),
+            entityId: numberProp(),
+            gate: stringProp(),
+            status: stringProp(),
+            summary: stringProp(),
+            evidenceIds: arrayProp(),
+            actor: stringProp()
+        }, ["root", "entityType", "entityId", "gate"]),
+        handler: (input) => withDb(str(input.root), (db) => ({
+            ok: true,
+            id: db.addValidationGate({
+                entityType: str(input.entityType),
+                entityId: num(input.entityId, 0),
+                gate: str(input.gate),
+                status: (maybeStr(input.status) ?? "pending"),
+                summary: maybeStr(input.summary) ?? "",
+                evidenceIds: numberArray(input.evidenceIds),
+                actor: maybeStr(input.actor) ?? "coordinator"
+            })
+        }))
+    },
+    {
         name: "proteus_record_agent_output",
         title: "Record Agent Output",
         description: "Record structured output from a Proteus specialist agent.",
@@ -299,6 +382,19 @@ const tools = [
                 exhaustionLevel: item.exhaustionLevel,
                 revisitCondition: item.revisitCondition
             }));
+        })
+    },
+    {
+        name: "proteus_query_surfaces",
+        title: "Query Surfaces",
+        description: "Search target-specific surfaces/components by name, family, description, files, or revisit condition.",
+        inputSchema: schema({ root: stringProp(), text: stringProp("Surface search text."), limit: numberProp("Max rows.") }, ["root", "text"]),
+        handler: ({ root, text, limit }) => withDb(str(root), (db) => {
+            const query = str(text).toLowerCase();
+            return db
+                .listSurfaces()
+                .filter((item) => [item.name, item.family, item.description, item.revisitCondition, item.files.join(" ")].join(" ").toLowerCase().includes(query))
+                .slice(0, num(limit, 20));
         })
     },
     {
@@ -495,6 +591,34 @@ function readTargetMaybe(root) {
         db.close();
     }
 }
+function listRecords(db, recordType, options) {
+    if (recordType === "surfaces") {
+        const text = options.text?.toLowerCase() ?? "";
+        return db
+            .listSurfaces()
+            .filter((row) => !options.status || row.status === options.status)
+            .filter((row) => !text || [row.name, row.family, row.description, row.revisitCondition].join(" ").toLowerCase().includes(text))
+            .slice(0, options.limit);
+    }
+    if (recordType === "hypotheses") {
+        return db
+            .listHypotheses()
+            .filter((row) => !options.status || row.status === options.status)
+            .slice(0, options.limit);
+    }
+    if (recordType === "evidence")
+        return db.listEvidence().slice(0, options.limit);
+    if (recordType === "decisions")
+        return db.listDecisions().slice(0, options.limit);
+    if (recordType === "gates") {
+        return db
+            .listValidationGates()
+            .filter((row) => !options.entityType || row.entityType === options.entityType)
+            .filter((row) => options.entityId === undefined || row.entityId === options.entityId)
+            .slice(0, options.limit);
+    }
+    throw new Error("recordType must be one of: surfaces, hypotheses, evidence, decisions, gates");
+}
 function schema(properties, required = []) {
     return { type: "object", properties, required, additionalProperties: true };
 }
@@ -544,4 +668,19 @@ function objectArray(value) {
 }
 function objectValue(value) {
     return typeof value === "object" && value !== null && !Array.isArray(value) ? value : undefined;
+}
+function roiFromInput(input) {
+    return {
+        impactPotential: num(input?.impactPotential, 0),
+        externalReachability: num(input?.externalReachability, 0),
+        trustBoundaryDensity: num(input?.trustBoundaryDensity, 0),
+        recentChangeWeight: num(input?.recentChangeWeight, 0),
+        unexploredInvariantWeight: num(input?.unexploredInvariantWeight, 0),
+        toolingReadiness: num(input?.toolingReadiness, 0),
+        duplicateRisk: num(input?.duplicateRisk, 0),
+        expectedBehaviorLikelihood: num(input?.expectedBehaviorLikelihood, 0),
+        priorExhaustionWeight: num(input?.priorExhaustionWeight, 0),
+        validationCost: num(input?.validationCost, 0),
+        lowSignalHistory: num(input?.lowSignalHistory, 0)
+    };
 }

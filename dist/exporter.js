@@ -15,10 +15,12 @@ function exportMarkdown(db, latestPlan) {
     const target = db.getTarget();
     const surfaces = db.listSurfaces();
     const hypotheses = db.listHypotheses();
+    const gates = db.listValidationGates();
     const rounds = db.listRounds();
     written.push(writeFile(outDir, "target-contract.md", renderTarget(target)));
     written.push(writeFile(outDir, "surface-map.md", renderSurfaces(surfaces)));
     written.push(writeFile(outDir, "candidate-register.md", renderCandidates(hypotheses)));
+    written.push(writeFile(outDir, "validation-gates.md", renderGates(gates)));
     written.push(writeFile(outDir, "research-log.md", renderResearchLog(rounds)));
     if (latestPlan) {
         written.push(writeFile(outDir, `round-plan-${rounds[0]?.id ?? "latest"}.md`, (0, planner_1.renderRoundPlan)(latestPlan)));
@@ -69,6 +71,12 @@ function renderCandidates(hypotheses) {
         .map((hypothesis) => `| H${hypothesis.id} | ${hypothesis.title} | ${hypothesis.killCriteria || "discarded"} | ${hypothesis.revisitCondition || "-"} |`)
         .join("\n");
     return `# Candidate Register\n\n## Live / Watchlist / Candidate\n\n| ID | Name | Primitive | Attacker boundary | Impact | Status | Score | Kill criteria |\n| --- | --- | --- | --- | --- | --- | ---: | --- |\n${live || "| - | - | - | - | - | - | - | - |"}\n\n## Discarded\n\n| ID | Hypothesis | Reason discarded | Revisit only if |\n| --- | --- | --- | --- |\n${discarded || "| - | - | - | - |"}\n`;
+}
+function renderGates(gates) {
+    const rows = gates
+        .map((gate) => `| G${gate.id} | ${gate.entityType}#${gate.entityId} | ${gate.gate} | ${gate.status} | ${gate.evidenceIds.join(", ") || "-"} | ${gate.summary || "-"} |`)
+        .join("\n");
+    return `# Validation Gates\n\n| ID | Entity | Gate | Status | Evidence | Summary |\n| --- | --- | --- | --- | --- | --- |\n${rows || "| - | - | - | - | - | - |"}\n`;
 }
 function renderResearchLog(rounds) {
     const entries = rounds

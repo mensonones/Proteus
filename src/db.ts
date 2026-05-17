@@ -7,7 +7,8 @@ import {
   evidenceInputSchema,
   hypothesisInputSchema,
   surfaceInputSchema,
-  targetContractSchema
+  targetContractSchema,
+  validationGateInputSchema
 } from "./schemas";
 import type {
   DecisionInput,
@@ -16,7 +17,8 @@ import type {
   JsonValue,
   RoiFactors,
   SurfaceInput,
-  TargetContract
+  TargetContract,
+  ValidationGateInput
 } from "./types";
 
 const emitWarning = process.emitWarning;
@@ -248,6 +250,10 @@ export class ProteusDb {
       .map(toHypothesisRow);
   }
 
+  listEvidence(): EvidenceRow[] {
+    return this.db.prepare("SELECT * FROM evidence ORDER BY id DESC").all().map(toEvidenceRow);
+  }
+
   addEvidence(input: EvidenceInput): number {
     const target = requireTarget(this);
     const evidence = evidenceInputSchema.parse(input);
@@ -273,6 +279,10 @@ export class ProteusDb {
     return id;
   }
 
+  listDecisions(): DecisionRow[] {
+    return this.db.prepare("SELECT * FROM decisions ORDER BY id DESC").all().map(toDecisionRow);
+  }
+
   addDecision(input: DecisionInput): number {
     const target = requireTarget(this);
     const decision = decisionInputSchema.parse(input);
@@ -296,6 +306,37 @@ export class ProteusDb {
     const id = Number(result.lastInsertRowid);
     this.indexFts("decision", id, `${decision.entityType}\n${decision.decision}\n${decision.reason}`);
     return id;
+  }
+
+  addValidationGate(input: ValidationGateInput): number {
+    const target = requireTarget(this);
+    const gate = validationGateInputSchema.parse(input);
+    const now = nowIso();
+    const result = this.db
+      .prepare(
+        `INSERT INTO validation_gates
+          (target_id, entity_type, entity_id, gate, status, summary, evidence_ids_json, actor, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      )
+      .run(
+        target.id,
+        gate.entityType,
+        gate.entityId,
+        gate.gate,
+        gate.status,
+        gate.summary,
+        json(gate.evidenceIds),
+        gate.actor,
+        now,
+        now
+      );
+    const id = Number(result.lastInsertRowid);
+    this.indexFts("gate", id, `${gate.entityType}\n${gate.entityId}\n${gate.gate}\n${gate.status}\n${gate.summary}`);
+    return id;
+  }
+
+  listValidationGates(): ValidationGateRow[] {
+    return this.db.prepare("SELECT * FROM validation_gates ORDER BY id DESC").all().map(toValidationGateRow);
   }
 
   addRound(round: {
@@ -463,6 +504,7 @@ export class ProteusDb {
       hypotheses: this.count("hypotheses"),
       evidence: this.count("evidence"),
       decisions: this.count("decisions"),
+      gates: this.count("validation_gates"),
       rounds: this.count("rounds"),
       agentOutputs: this.count("agent_outputs"),
       labs: this.count("labs"),
@@ -494,106 +536,9 @@ export class ProteusDb {
 
   private coverageCandidates(): CoverageCandidate[] {
     const candidates: CoverageCandidate[] = [];
-    for (const row of this.db.prepare("SELECT * FROM hypotheses").all() as Row[]) {
-      candidates.push({
-        entityType: "hypothesis",
-        entityId: Number(row.id),
-        title: String(row.title),
-        status: String(row.status),
-        summary: compactSummary([row.primitive, row.attacker_boundary, row.impact_claim, row.kill_criteria, row.revisit_condition]),
-        searchText: compactSummary([row.title, row.primitive, row.attacker_boundary, row.impact_claim, row.heuristic_family, row.status, row.kill_criteria, row.revisit_condition]),
-        baseScore: 40
-      });
-    }
-    for (const row of this.db.prepare("SELECT * FROM decisions").all() as Row[]) {
-      candidates.push({
-        entityType: "decision",
-        entityId: Number(row.id),
-        title: `${row.decision} ${row.entity_type}#${row.entity_id}`,
-        status: String(row.decision),
-        summary: String(row.reason ?? ""),
-        searchText: compactSummary([row.entity_type, row.decision, row.reason]),
-        baseScore: 36
-      });
-    }
-    for (const row of this.db.prepare("SELECT * FROM evidence").all() as Row[]) {
-      candidates.push({
-        entityType: "evidence",
-        entityId: Number(row.id),
-        title: String(row.title),
-        status: String(row.kind),
-        summary: compactSummary([row.body, row.path_or_url, row.command]),
-        searchText: compactSummary([row.kind, row.title, row.body, row.path_or_url, row.command]),
-        baseScore: 30
-      });
-    }
-    for (const row of this.db.prepare("SELECT * FROM agent_outputs").all() as Row[]) {
-      candidates.push({
-        entityType: "agent_output",
-        entityId: Number(row.id),
-        title: `${row.agent_codename} on ${row.assigned_surface}`,
-        status: String(row.validation_status),
-        summary: compactSummary([
-          row.covered_surface_json,
-          row.live_candidates_json,
-          row.killed_hypotheses_json,
-          row.probes_json,
-          row.uncovered_areas_json
-        ]),
-        searchText: compactSummary([
-          row.agent_codename,
-          row.agent_role_family,
-          row.assigned_surface,
-          row.validation_status,
-          row.output_path,
-          row.covered_surface_json,
-          row.live_candidates_json,
-          row.killed_hypotheses_json,
-          row.probes_json,
-          row.uncovered_areas_json
-        ]),
-        baseScore: 34
-      });
-    }
-    for (const row of this.db.prepare("SELECT * FROM rounds").all() as Row[]) {
-      candidates.push({
-        entityType: "round",
-        entityId: Number(row.id),
-        title: String(row.objective),
-        status: String(row.outcome ?? ""),
-        summary: compactSummary([
-          row.current_understanding,
-          row.selected_surfaces_json,
-          row.skipped_surfaces_json,
-          row.agent_fronts_json,
-          row.stop_conditions_json
-        ]),
-        searchText: compactSummary([
-          row.objective,
-          row.current_understanding,
-          row.selected_surfaces_json,
-          row.skipped_surfaces_json,
-          row.agent_fronts_json,
-          row.validation_gates_json,
-          row.stop_conditions_json,
-          row.outcome
-        ]),
-        baseScore: 28
-      });
-    }
-    for (const row of this.db.prepare("SELECT * FROM surfaces").all() as Row[]) {
-      candidates.push({
-        entityType: "surface",
-        entityId: Number(row.id),
-        title: String(row.name),
-        status: String(row.status),
-        summary: compactSummary([row.family, row.description, row.files_json, row.revisit_condition]),
-        searchText: compactSummary([row.name, row.family, row.description, row.files_json, row.status, row.revisit_condition]),
-        baseScore: surfaceCoverageWeight(String(row.status))
-      });
-    }
     for (const row of this.db.prepare("SELECT * FROM sources").all() as Row[]) {
       const kind = String(row.kind);
+      if (!duplicateSourceKinds.has(kind)) continue;
       candidates.push({
         entityType: "source",
         entityId: Number(row.id),
@@ -611,6 +556,11 @@ export class ProteusDb {
 
   private migrate(): void {
     this.db.exec(`
+      CREATE TABLE IF NOT EXISTS schema_migrations (
+        version TEXT PRIMARY KEY,
+        applied_at TEXT NOT NULL
+      );
+
       CREATE TABLE IF NOT EXISTS targets (
         id INTEGER PRIMARY KEY,
         name TEXT NOT NULL,
@@ -705,6 +655,20 @@ export class ProteusDb {
         created_at TEXT NOT NULL
       );
 
+      CREATE TABLE IF NOT EXISTS validation_gates (
+        id INTEGER PRIMARY KEY,
+        target_id INTEGER NOT NULL REFERENCES targets(id) ON DELETE CASCADE,
+        entity_type TEXT NOT NULL,
+        entity_id INTEGER NOT NULL,
+        gate TEXT NOT NULL,
+        status TEXT NOT NULL,
+        summary TEXT NOT NULL,
+        evidence_ids_json TEXT NOT NULL,
+        actor TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+
       CREATE TABLE IF NOT EXISTS rounds (
         id INTEGER PRIMARY KEY,
         target_id INTEGER NOT NULL REFERENCES targets(id) ON DELETE CASCADE,
@@ -754,6 +718,9 @@ export class ProteusDb {
         entity_id UNINDEXED,
         content
       );
+
+      INSERT OR IGNORE INTO schema_migrations (version, applied_at)
+      VALUES ('2026-05-17-validation-gates-surfaces-and-focused-duplicates', CURRENT_TIMESTAMP);
     `);
   }
 
@@ -789,6 +756,40 @@ export interface HypothesisRow {
   score: number;
   killCriteria: string;
   revisitCondition: string;
+}
+
+export interface EvidenceRow {
+  id: number;
+  kind: string;
+  title: string;
+  body: string;
+  pathOrUrl: string;
+  command: string;
+  createdAt: string;
+}
+
+export interface DecisionRow {
+  id: number;
+  entityType: string;
+  entityId: number;
+  decision: string;
+  reason: string;
+  evidenceIds: number[];
+  actor: string;
+  createdAt: string;
+}
+
+export interface ValidationGateRow {
+  id: number;
+  entityType: string;
+  entityId: number;
+  gate: string;
+  status: string;
+  summary: string;
+  evidenceIds: number[];
+  actor: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface RoundRow {
@@ -834,6 +835,7 @@ export interface MemoryStats {
   hypotheses: number;
   evidence: number;
   decisions: number;
+  gates: number;
   rounds: number;
   agentOutputs: number;
   labs: number;
@@ -870,6 +872,8 @@ type ScoredCoverageCandidate = CoverageCandidate & {
 };
 
 type Row = Record<string, unknown>;
+
+const duplicateSourceKinds = new Set(["finding", "report", "discarded", "watchlist", "candidate_register"]);
 
 function toSourceRow(row: Row): SourceRow {
   return {
@@ -910,6 +914,46 @@ function toHypothesisRow(row: Row): HypothesisRow {
     score: Number(row.score),
     killCriteria: String(row.kill_criteria ?? ""),
     revisitCondition: String(row.revisit_condition ?? "")
+  };
+}
+
+function toEvidenceRow(row: Row): EvidenceRow {
+  return {
+    id: Number(row.id),
+    kind: String(row.kind),
+    title: String(row.title),
+    body: String(row.body ?? ""),
+    pathOrUrl: String(row.path_or_url ?? ""),
+    command: String(row.command ?? ""),
+    createdAt: String(row.created_at)
+  };
+}
+
+function toDecisionRow(row: Row): DecisionRow {
+  return {
+    id: Number(row.id),
+    entityType: String(row.entity_type),
+    entityId: Number(row.entity_id),
+    decision: String(row.decision),
+    reason: String(row.reason),
+    evidenceIds: parseJson(String(row.evidence_ids_json)) as number[],
+    actor: String(row.actor),
+    createdAt: String(row.created_at)
+  };
+}
+
+function toValidationGateRow(row: Row): ValidationGateRow {
+  return {
+    id: Number(row.id),
+    entityType: String(row.entity_type),
+    entityId: Number(row.entity_id),
+    gate: String(row.gate),
+    status: String(row.status),
+    summary: String(row.summary ?? ""),
+    evidenceIds: parseJson(String(row.evidence_ids_json)) as number[],
+    actor: String(row.actor),
+    createdAt: String(row.created_at),
+    updatedAt: String(row.updated_at)
   };
 }
 
@@ -1022,8 +1066,7 @@ function sourceCoverageWeight(kind: string): number {
 
 function isActionableCoverageResult(candidate: ScoredCoverageCandidate): boolean {
   if (candidate.entityType !== "source") return true;
-  const actionableSourceKinds = new Set(["finding", "report", "advisory", "discarded", "watchlist", "candidate_register"]);
-  if (candidate.kind && actionableSourceKinds.has(candidate.kind)) return true;
+  if (candidate.kind && duplicateSourceKinds.has(candidate.kind)) return true;
   return false;
 }
 
@@ -1039,6 +1082,8 @@ function tableForEntity(entityType: string): string | null {
     hypothesis: "hypotheses",
     evidence: "evidence",
     decision: "decisions",
+    gate: "validation_gates",
+    validation_gate: "validation_gates",
     round: "rounds",
     agent_output: "agent_outputs",
     lab: "labs"
@@ -1061,6 +1106,9 @@ function materializeRecord(entityType: string, row: Row): Record<string, unknown
   }
   if (entityType === "surface") return { entityType, ...toSurfaceRow(row) };
   if (entityType === "hypothesis") return { entityType, ...toHypothesisRow(row) };
+  if (entityType === "evidence") return { entityType, ...toEvidenceRow(row) };
+  if (entityType === "decision") return { ...toDecisionRow(row), entityType };
+  if (entityType === "gate" || entityType === "validation_gate") return { ...toValidationGateRow(row), entityType: "gate" };
   if (entityType === "round") return { entityType, ...toRoundRow(row) };
   return { entityType, ...row };
 }

@@ -55,6 +55,9 @@ function main() {
             case "record":
                 cmdRecord(db, subcommand, parsed);
                 break;
+            case "list":
+                cmdList(db, subcommand, parsed);
+                break;
             case "update":
                 cmdUpdate(db, subcommand, parsed);
                 break;
@@ -109,6 +112,7 @@ function cmdStatus(db) {
     console.log(`Hypotheses: ${stats.hypotheses}`);
     console.log(`Evidence: ${stats.evidence}`);
     console.log(`Decisions: ${stats.decisions}`);
+    console.log(`Gates: ${stats.gates}`);
     console.log(`Rounds: ${stats.rounds}`);
     console.log(`Agent outputs: ${stats.agentOutputs}`);
     console.log(`Labs: ${stats.labs}`);
@@ -182,6 +186,23 @@ function cmdPrompt(db, parsed) {
 }
 function cmdRecord(db, subcommand, parsed) {
     requireInitialized(db);
+    if (subcommand === "surface") {
+        const id = db.addSurface({
+            name: requiredString(parsed, "name"),
+            family: getString(parsed, "family") ?? "coordinator-supplied",
+            description: getString(parsed, "description") ?? "",
+            files: splitList(getString(parsed, "files") ?? ""),
+            symbols: splitList(getString(parsed, "symbols") ?? ""),
+            entrypoints: splitList(getString(parsed, "entrypoints") ?? ""),
+            trustBoundaries: splitList(getString(parsed, "trust-boundaries") ?? ""),
+            runtimeModes: splitList(getString(parsed, "runtime-modes") ?? ""),
+            status: (getString(parsed, "status") ?? "active"),
+            roi: roiFromFlags(parsed),
+            revisitCondition: getString(parsed, "revisit") ?? ""
+        });
+        console.log(`Recorded surface S${id}`);
+        return;
+    }
     if (subcommand === "hypothesis") {
         const input = {
             surfaceId: getNumber(parsed, "surface-id"),
@@ -225,6 +246,19 @@ function cmdRecord(db, subcommand, parsed) {
         console.log(`Recorded decision D${id}`);
         return;
     }
+    if (subcommand === "gate") {
+        const id = db.addValidationGate({
+            entityType: requiredString(parsed, "entity-type"),
+            entityId: requiredNumber(parsed, "entity-id"),
+            gate: requiredString(parsed, "gate"),
+            status: (getString(parsed, "status") ?? "pending"),
+            summary: getString(parsed, "summary") ?? "",
+            evidenceIds: splitList(getString(parsed, "evidence-ids") ?? "").map((item) => Number(item)).filter(Boolean),
+            actor: getString(parsed, "actor") ?? "coordinator"
+        });
+        console.log(`Recorded gate G${id}`);
+        return;
+    }
     if (subcommand === "agent-output") {
         const role = requiredString(parsed, "role");
         if (!(role in roles_1.ROLES))
@@ -245,7 +279,77 @@ function cmdRecord(db, subcommand, parsed) {
         console.log(`Recorded agent output A${id}`);
         return;
     }
-    throw new Error("record requires one of: hypothesis, evidence, decision, agent-output");
+    throw new Error("record requires one of: surface, hypothesis, evidence, decision, gate, agent-output");
+}
+function cmdList(db, subcommand, parsed) {
+    requireInitialized(db);
+    const limit = getNumber(parsed, "limit") ?? 50;
+    if (subcommand === "surfaces") {
+        const text = (getString(parsed, "text") ?? "").toLowerCase();
+        const status = getString(parsed, "status");
+        const rows = db
+            .listSurfaces()
+            .filter((row) => !status || row.status === status)
+            .filter((row) => !text || [row.name, row.family, row.description, row.revisitCondition].join(" ").toLowerCase().includes(text))
+            .slice(0, limit);
+        for (const row of rows) {
+            console.log(`S${row.id} [${row.status}] ${row.name} family=${row.family} roi=${row.roiScore.toFixed(1)} exhaustion=${row.exhaustionLevel}`);
+            console.log(`  files=${row.files.length} revisit=${row.revisitCondition || "-"}`);
+            if (row.description)
+                console.log(`  ${row.description}`);
+        }
+        if (rows.length === 0)
+            console.log("No surfaces recorded.");
+        return;
+    }
+    if (subcommand === "hypotheses") {
+        const status = getString(parsed, "status");
+        const rows = db.listHypotheses().filter((row) => !status || row.status === status).slice(0, limit);
+        for (const row of rows) {
+            console.log(`H${row.id} [${row.status}] score=${row.score.toFixed(1)} surface=${row.surfaceId ?? "-"} ${row.title}`);
+            console.log(`  primitive=${row.primitive} impact=${row.impactClaim}`);
+        }
+        if (rows.length === 0)
+            console.log("No hypotheses recorded.");
+        return;
+    }
+    if (subcommand === "evidence") {
+        const rows = db.listEvidence().slice(0, limit);
+        for (const row of rows) {
+            console.log(`E${row.id} [${row.kind}] ${row.title}`);
+            console.log(`  ${truncateForCli(row.body || row.pathOrUrl || row.command || "-", 180)}`);
+        }
+        if (rows.length === 0)
+            console.log("No evidence recorded.");
+        return;
+    }
+    if (subcommand === "decisions") {
+        const rows = db.listDecisions().slice(0, limit);
+        for (const row of rows) {
+            console.log(`D${row.id} ${row.decision} ${row.entityType}#${row.entityId} by=${row.actor}`);
+            console.log(`  evidence=${row.evidenceIds.join(",") || "-"} reason=${truncateForCli(row.reason, 180)}`);
+        }
+        if (rows.length === 0)
+            console.log("No decisions recorded.");
+        return;
+    }
+    if (subcommand === "gates") {
+        const entityType = getString(parsed, "entity-type");
+        const entityId = getNumber(parsed, "entity-id");
+        const rows = db
+            .listValidationGates()
+            .filter((row) => !entityType || row.entityType === entityType)
+            .filter((row) => entityId === undefined || row.entityId === entityId)
+            .slice(0, limit);
+        for (const row of rows) {
+            console.log(`G${row.id} [${row.status}] ${row.gate} for ${row.entityType}#${row.entityId} by=${row.actor}`);
+            console.log(`  evidence=${row.evidenceIds.join(",") || "-"} ${truncateForCli(row.summary || "-", 180)}`);
+        }
+        if (rows.length === 0)
+            console.log("No validation gates recorded.");
+        return;
+    }
+    throw new Error("list requires one of: surfaces, hypotheses, evidence, decisions, gates");
 }
 function cmdUpdate(db, subcommand, parsed) {
     requireInitialized(db);
@@ -304,7 +408,21 @@ function cmdQuery(db, subcommand, parsed) {
             console.log("No matching surfaces found.");
         return;
     }
-    throw new Error("query requires one of: duplicates, memory, revisit");
+    if (subcommand === "surfaces") {
+        const text = parsed.command.slice(2).join(" ") || requiredString(parsed, "text");
+        const query = text.toLowerCase();
+        const rows = db
+            .listSurfaces()
+            .filter((surface) => [surface.name, surface.family, surface.description, surface.revisitCondition, surface.files.join(" ")].join(" ").toLowerCase().includes(query));
+        for (const surface of rows) {
+            console.log(`S${surface.id} [${surface.status}] ${surface.name}: family=${surface.family}, ROI=${surface.roiScore.toFixed(1)}, files=${surface.files.length}`);
+            console.log(`  revisit=${surface.revisitCondition || "-"}`);
+        }
+        if (rows.length === 0)
+            console.log("No matching surfaces found.");
+        return;
+    }
+    throw new Error("query requires one of: duplicates, memory, revisit, surfaces");
 }
 function cmdShow(db, parsed) {
     requireInitialized(db);
@@ -448,6 +566,24 @@ function splitList(value) {
         .map((item) => item.trim())
         .filter(Boolean);
 }
+function roiFromFlags(parsed) {
+    return {
+        impactPotential: getNumber(parsed, "impact-potential") ?? 0,
+        externalReachability: getNumber(parsed, "external-reachability") ?? 0,
+        trustBoundaryDensity: getNumber(parsed, "trust-boundary-density") ?? 0,
+        recentChangeWeight: getNumber(parsed, "recent-change") ?? 0,
+        unexploredInvariantWeight: getNumber(parsed, "unexplored-invariant") ?? 0,
+        toolingReadiness: getNumber(parsed, "tooling-readiness") ?? 0,
+        duplicateRisk: getNumber(parsed, "duplicate-risk") ?? 0,
+        expectedBehaviorLikelihood: getNumber(parsed, "expected-risk") ?? 0,
+        priorExhaustionWeight: getNumber(parsed, "prior-exhaustion") ?? 0,
+        validationCost: getNumber(parsed, "validation-cost") ?? 0,
+        lowSignalHistory: getNumber(parsed, "low-signal-history") ?? 0
+    };
+}
+function truncateForCli(value, limit) {
+    return value.length <= limit ? value : `${value.slice(0, limit - 3)}...`;
+}
 function printHelp() {
     console.log(`Proteus CLI
 
@@ -459,15 +595,19 @@ Usage:
   proteus plan-round [--root <path>] [--objective <text>] [--context <text>] [--plan-json <path>] [--write]
   proteus roles
   proteus prompt --role <argus|loom|chaos|libris|mimic|artificer|skeptic> --surface <text>
+  proteus record surface --name <text> [--family <text>] [--files a,b] [--status active|covered|exhausted|low_roi|blocked|watch]
   proteus record hypothesis --title <text> [--surface-id <id>] [--impact <text>]
   proteus record evidence --title <text> [--kind <kind>] [--body <text>]
   proteus record decision --entity-type <type> --entity-id <id> --decision <text> --reason <text>
+  proteus record gate --entity-type <type> --entity-id <id> --gate <G1|...> [--status pending|pass|fail|blocked|not_applicable]
   proteus record agent-output --round-id <id> --role <codename> --surface <text>
+  proteus list surfaces|hypotheses|evidence|decisions|gates [--limit <n>]
   proteus update surface --id <id> [--status exhausted|low_roi|covered|blocked|watch] [--revisit <text>]
   proteus query duplicates <text>
   proteus query memory <text>
   proteus query revisit <surface>
-  proteus show <source|surface|hypothesis|evidence|decision|round|agent_output|lab> <id>
+  proteus query surfaces <text>
+  proteus show <source|surface|hypothesis|evidence|decision|gate|round|agent_output|lab> <id>
   proteus export [--root <path>]
   proteus lab create --candidate-id <id> [--name <name>]
   proteus learn add --title <text> [--category <category>] [--scope <scope>] [--body <text>] [--tags a,b]

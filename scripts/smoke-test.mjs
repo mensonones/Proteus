@@ -2,12 +2,15 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
+import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const require = createRequire(import.meta.url);
 const cli = path.join(repoRoot, "dist", "cli.js");
 const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), "proteus-smoke-"));
 const globalRoot = fs.mkdtempSync(path.join(os.tmpdir(), "proteus-global-smoke-"));
+const legacyRoot = fs.mkdtempSync(path.join(os.tmpdir(), "proteus-legacy-smoke-"));
 
 function run(args, cwd = tmpRoot) {
   return execFileSync("node", [cli, ...args], {
@@ -23,6 +26,67 @@ function run(args, cwd = tmpRoot) {
 }
 
 try {
+  fs.mkdirSync(path.join(legacyRoot, ".vros"), { recursive: true });
+  const emitWarning = process.emitWarning;
+  process.emitWarning = (warning, ...args) => {
+    const message = typeof warning === "string" ? warning : warning?.message;
+    const warningType = typeof args[0] === "string" ? args[0] : undefined;
+    if (warningType === "ExperimentalWarning" && String(message).includes("SQLite")) return;
+    return emitWarning.call(process, warning, ...args);
+  };
+  const { DatabaseSync } = require("node:sqlite");
+  const legacyDb = new DatabaseSync(path.join(legacyRoot, ".vros", "memory.sqlite"));
+  process.emitWarning = emitWarning;
+  legacyDb.exec(`
+    CREATE TABLE targets (
+      id INTEGER PRIMARY KEY,
+      name TEXT NOT NULL,
+      root_path TEXT NOT NULL,
+      contract_json TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+  `);
+  legacyDb.prepare("INSERT INTO targets (name, root_path, contract_json, created_at, updated_at) VALUES (?, ?, ?, ?, ?)").run(
+    "legacy-target",
+    legacyRoot,
+    JSON.stringify({
+      target: "legacy-target",
+      scopeRoot: legacyRoot,
+      inScope: [],
+      outOfScope: [],
+      existingWork: [],
+      primaryImpactClasses: [],
+      hardExclusions: [],
+      assumptions: [],
+      availableTooling: [],
+      credentialsAvailable: "unknown",
+      continuousMode: false,
+      stopOnCandidate: true
+    }),
+    new Date().toISOString(),
+    new Date().toISOString()
+  );
+  legacyDb.close();
+  const migratedStatus = run(["status", "--root", legacyRoot], legacyRoot);
+  if (!migratedStatus.includes("legacy-target") || !migratedStatus.includes("Gates: 0")) {
+    throw new Error("legacy memory migration did not preserve target and create new gate schema");
+  }
+  run([
+    "record",
+    "gate",
+    "--root",
+    legacyRoot,
+    "--entity-type",
+    "hypothesis",
+    "--entity-id",
+    "1",
+    "--gate",
+    "G1 root cause in target",
+    "--status",
+    "pending"
+  ]);
+
   fs.mkdirSync(path.join(tmpRoot, "docs"), { recursive: true });
   fs.writeFileSync(
     path.join(tmpRoot, "docs", "prior-finding.md"),
@@ -51,6 +115,36 @@ try {
   const prompt = run(["prompt", "--role", "skeptic", "--surface", "Smoke request surface"]);
   if (!prompt.includes("Skeptic") || !prompt.includes("Smoke request surface")) {
     throw new Error("prompt did not render expected role instructions");
+  }
+  run([
+    "record",
+    "surface",
+    "--name",
+    "Smoke request surface",
+    "--family",
+    "request-routing",
+    "--description",
+    "Smoke target-specific surface",
+    "--files",
+    "server.ts",
+    "--status",
+    "active",
+    "--impact-potential",
+    "8",
+    "--external-reachability",
+    "7",
+    "--trust-boundary-density",
+    "6",
+    "--revisit",
+    "new request boundary"
+  ]);
+  const surfaces = run(["list", "surfaces"]);
+  if (!surfaces.includes("Smoke request surface")) {
+    throw new Error("list surfaces did not return recorded surface");
+  }
+  const surfaceQuery = run(["query", "surfaces", "request"]);
+  if (!surfaceQuery.includes("Smoke request surface")) {
+    throw new Error("query surfaces did not return recorded surface");
   }
   run([
     "learn",
@@ -94,6 +188,8 @@ try {
     "hypothesis",
     "--title",
     "Smoke validation candidate",
+    "--surface-id",
+    "1",
     "--primitive",
     "validation gate",
     "--attacker-boundary",
@@ -127,9 +223,33 @@ try {
     "--evidence-ids",
     "1"
   ]);
+  run([
+    "record",
+    "gate",
+    "--entity-type",
+    "hypothesis",
+    "--entity-id",
+    "1",
+    "--gate",
+    "G2 realistic external attacker input",
+    "--status",
+    "pass",
+    "--summary",
+    "Smoke gate passed",
+    "--evidence-ids",
+    "1"
+  ]);
+  const gates = run(["list", "gates", "--entity-type", "hypothesis", "--entity-id", "1"]);
+  if (!gates.includes("G2 realistic external attacker input") || !gates.includes("[pass]")) {
+    throw new Error("list gates did not return recorded validation gate");
+  }
+  const gateRecord = run(["show", "gate", "1"]);
+  if (!gateRecord.includes('"entityType": "gate"') || !gateRecord.includes("Smoke gate passed")) {
+    throw new Error("show gate did not return full validation gate record");
+  }
   const duplicates = run(["query", "duplicates", "validation gate"]);
-  if (!duplicates.includes("source#") && !duplicates.includes("hypothesis#")) {
-    throw new Error("duplicate coverage query did not return indexed records");
+  if (!duplicates.includes("source#") || duplicates.includes("hypothesis#")) {
+    throw new Error("duplicate coverage query should only return finding/report style source records");
   }
   if (!duplicates.includes("score=") || !duplicates.includes("matched=")) {
     throw new Error("duplicate coverage query did not return summarized coverage metadata");
@@ -155,8 +275,13 @@ try {
     throw new Error("show did not return full source record");
   }
   const revisit = run(["query", "revisit", "request"]);
-  if (!revisit.includes("No matching surfaces found.")) {
-    throw new Error("revisit query should be empty before coordinator records target-specific surfaces");
+  if (!revisit.includes("Smoke request surface")) {
+    throw new Error("revisit query did not return recorded target-specific surface");
+  }
+  run(["update", "surface", "--id", "1", "--status", "covered", "--revisit", "smoke revisit condition"]);
+  const updatedSurface = run(["list", "surfaces", "--status", "covered"]);
+  if (!updatedSurface.includes("smoke revisit condition")) {
+    throw new Error("update surface did not preserve status and revisit condition");
   }
   run(["lab", "create", "--candidate-id", "1", "--name", "smoke-lab"]);
   run(["export"]);
@@ -185,6 +310,7 @@ try {
     ".vros/exports/target-contract.md",
     ".vros/exports/surface-map.md",
     ".vros/exports/candidate-register.md",
+    ".vros/exports/validation-gates.md",
     ".vros/exports/research-log.md",
     ".vros/labs/C1-smoke-lab/README.md",
     ".vros/labs/C1-smoke-lab/report-draft.md"
@@ -210,4 +336,5 @@ try {
 } finally {
   fs.rmSync(tmpRoot, { recursive: true, force: true });
   fs.rmSync(globalRoot, { recursive: true, force: true });
+  fs.rmSync(legacyRoot, { recursive: true, force: true });
 }

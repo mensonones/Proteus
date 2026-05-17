@@ -108,10 +108,12 @@ only relevant items into the round plan.
 
 Treat `.vros/memory.sqlite` as the source of truth. Local Markdown files are
 exports for human reading, not the primary state store. Use
-`proteus query duplicates` to check whether an area, candidate, primitive, root
-cause, or impact has already been covered. It returns compact coverage rows;
-use `proteus show <entityType> <id>` when the full record is needed. Use
-`proteus query memory` only for broad exploratory full-text search.
+`proteus query duplicates` only for duplicate checks against ingested
+findings/reports/discard/watchlist/candidate-register style records. Use
+`proteus query memory` for broad exploratory full-text search across hypotheses,
+decisions, evidence, validation gates, rounds, surfaces, reports, docs, and
+agent outputs. Use `proteus list ...` for structured category views and
+`proteus show <entityType> <id>` when the full record is needed.
 
 `proteus init` is intentionally empty beyond factual target identity. It must
 not invent in-scope paths, impact classes, hard exclusions, assumptions, prior
@@ -306,13 +308,17 @@ work:
   `reports/`, `docs/`, or target-specific research logs. Re-run it after adding
   or editing important local notes; `unchanged` means the same content hash is
   already in memory.
-- Use `proteus query duplicates` before spending time on a candidate, surface,
-  primitive, root cause, or impact claim. Treat results as prior coverage hints,
-  not automatic kills. If a result looks relevant, call
+- Use `proteus record surface` when the coordinator selects, scopes, covers, or
+  downgrades a target-specific component or area. A surface should have a name,
+  family, files when known, status, and a revisit condition.
+- Use `proteus list surfaces` and `proteus query surfaces` before assigning an
+  agent front so you do not reopen exhausted, low-ROI, blocked, or watchlisted
+  areas without a fresh reason.
+- Use `proteus query duplicates` before spending time on a candidate, primitive,
+  root cause, or impact claim. It is a narrow report/finding duplicate check,
+  not a general memory search. Treat results as prior coverage hints, not
+  automatic kills. If a result looks relevant, call
   `proteus show <entityType> <id>` and read the full record before deciding.
-  Generic docs and broad source logs are intentionally left to
-  `proteus query memory`; they should not be treated as duplicate coverage by
-  themselves.
 - Use `proteus query memory` alongside `proteus query duplicates` before
   selecting a surface for a round, writing `round-input.json`, or delegating an
   agent front. `query memory` is where broad target notes, docs, research logs,
@@ -329,6 +335,12 @@ work:
 - Use `proteus record evidence` for command output, PoC results, negative
   controls, code-reading notes, docs/intel references, and other facts that
   support or kill a hypothesis.
+- Use `proteus record gate` whenever a validation gate becomes pending, passes,
+  fails, is blocked, or is not applicable. Gates are separate records so the
+  coordinator can list them without mixing them into generic notes.
+- Use `proteus list gates --entity-type hypothesis --entity-id <id>` before
+  promoting a candidate. Missing or unresolved gates keep the candidate below
+  report-grade.
 - Use `proteus record decision` whenever the coordinator promotes, downgrades,
   discards, blocks, or keeps watching an entity. The reason should be specific
   enough that a later agent can avoid repeating the same path.
@@ -337,7 +349,8 @@ work:
   hypotheses, probes, uncovered areas, and validation status.
 - Use `proteus update surface` when a surface is covered, exhausted, low ROI,
   blocked, or watchlisted. Always include a revisit condition that explains what
-  would make the surface worth reopening.
+  would make the surface worth reopening. Do not use it to invent a surface;
+  create the surface first with `proteus record surface`.
 - Use `proteus learn add` only for reusable cross-target lessons: user
   preferences, validation patterns, anti-patterns, tooling notes, and general
   strategy. Do not store target-specific evidence as a global learning.
@@ -352,10 +365,16 @@ Preferred command flow:
 proteus init --root <target-root> --name <target>
 proteus ingest --root <target-root> findings REPORTS reports docs
 proteus observe --root <target-root>
+proteus query memory --root <target-root> "<surface or target context>"
+proteus list surfaces --root <target-root>
+proteus record surface --root <target-root> --name "<surface>" --family "<family>" --files "a,b" --status active --revisit "<condition>"
 proteus plan-round --root <target-root> --objective "<objective>" --plan-json round-input.json --write
 proteus query duplicates --root <target-root> "<candidate text>"
 proteus show --root <target-root> <entityType> <id>
 proteus record hypothesis --root <target-root> --title "<title>" --impact "<impact>"
+proteus record evidence --root <target-root> --title "<title>" --kind "<kind>" --body "<fact>"
+proteus record gate --root <target-root> --entity-type hypothesis --entity-id <id> --gate "<gate>" --status pass --summary "<why>"
+proteus list gates --root <target-root> --entity-type hypothesis --entity-id <id>
 proteus record agent-output --root <target-root> --round-id <id> --role argus --surface "<surface>"
 proteus update surface --root <target-root> --id <id> --status exhausted --revisit "<condition>"
 proteus lab create --root <target-root> --candidate-id <id> --name <name>
@@ -370,6 +389,7 @@ If the runtime is unavailable, keep files in the target workspace under
 ```text
 surface-map.md
 candidate-register.md
+validation-gates.md
 discarded.md
 watchlist.md
 research-log.md

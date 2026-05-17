@@ -247,6 +247,28 @@ hash
 created_at
 ```
 
+### validation_gates
+
+```text
+id
+target_id
+entity_type
+entity_id
+gate
+status
+summary
+evidence_ids_json
+actor
+created_at
+updated_at
+```
+
+Use gate records for validation state such as root cause, realistic attacker
+input, impact, documented/default configuration, negative controls, duplicate
+checks, public intel/timeline, Skeptic refutation, and PoC legitimacy. They are
+separate from evidence and decisions so an agent can list unresolved gates
+without scanning free-form notes.
+
 Evidence should be append-only. Edits should create new records or decisions.
 
 ### probes
@@ -458,6 +480,7 @@ candidate-register.md
 discarded.md
 watchlist.md
 surface-map.md
+validation-gates.md
 round-plan-<id>.md
 poc-readme-<candidate-id>.md
 report-draft-<candidate-id>.md
@@ -477,8 +500,15 @@ proteus_ingest
 proteus_observe
 proteus_plan_round
 proteus_query_duplicates
+proteus_query_memory
+proteus_query_surfaces
+proteus_list_records
+proteus_get_record
+proteus_record_surface
 proteus_record_hypothesis
+proteus_record_evidence
 proteus_record_decision
+proteus_record_gate
 proteus_record_agent_output
 proteus_update_surface
 proteus_export

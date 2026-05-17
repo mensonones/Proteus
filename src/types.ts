@@ -32,6 +32,13 @@ export type HypothesisStatus =
   | "promoted_to_poc"
   | "report_grade";
 
+export type ValidationGateStatus =
+  | "pending"
+  | "pass"
+  | "fail"
+  | "blocked"
+  | "not_applicable";
+
 export interface TargetContract {
   target: string;
   scopeRoot: string;
@@ -104,6 +111,16 @@ export interface DecisionInput {
   entityId: number;
   decision: string;
   reason: string;
+  evidenceIds: number[];
+  actor: string;
+}
+
+export interface ValidationGateInput {
+  entityType: string;
+  entityId: number;
+  gate: string;
+  status: ValidationGateStatus;
+  summary: string;
   evidenceIds: number[];
   actor: string;
 }

@@ -77,12 +77,16 @@ try {
     "proteus_query_duplicates",
     "proteus_query_memory",
     "proteus_get_record",
+    "proteus_list_records",
+    "proteus_record_surface",
     "proteus_record_hypothesis",
     "proteus_record_evidence",
     "proteus_record_decision",
+    "proteus_record_gate",
     "proteus_record_agent_output",
     "proteus_update_surface",
     "proteus_query_revisit",
+    "proteus_query_surfaces",
     "proteus_export",
     "proteus_lab_create",
     "proteus_record_global_learning",
@@ -97,6 +101,15 @@ try {
   await request("tools/call", {
     name: "proteus_init",
     arguments: { root: tmpRoot, name: "mcp-smoke-target" }
+  });
+  fs.mkdirSync(path.join(tmpRoot, "REPORTS"), { recursive: true });
+  fs.writeFileSync(
+    path.join(tmpRoot, "REPORTS", "smoke-report.md"),
+    "# Smoke Report\n\nSmoke daemon protocol surface duplicate report text.\n"
+  );
+  await request("tools/call", {
+    name: "proteus_ingest",
+    arguments: { root: tmpRoot, paths: ["REPORTS"] }
   });
 
   const status = await request("tools/call", {
@@ -146,6 +159,26 @@ try {
     throw new Error("proteus_plan_round did not preserve coordinator-supplied planning mode");
   }
   await request("tools/call", {
+    name: "proteus_record_surface",
+    arguments: {
+      root: tmpRoot,
+      name: "Smoke daemon protocol surface",
+      family: "daemon-protocol",
+      description: "MCP target-specific surface",
+      files: ["daemon.ts"],
+      status: "active",
+      revisitCondition: "mcp revisit",
+      roi: { impactPotential: 8, externalReachability: 7, trustBoundaryDensity: 6 }
+    }
+  });
+  const surfaces = await request("tools/call", {
+    name: "proteus_list_records",
+    arguments: { root: tmpRoot, recordType: "surfaces", text: "daemon" }
+  });
+  if (!String(surfaces.content?.[0]?.text ?? "").includes("Smoke daemon protocol surface")) {
+    throw new Error("proteus_list_records did not return recorded surface");
+  }
+  await request("tools/call", {
     name: "proteus_record_evidence",
     arguments: {
       root: tmpRoot,
@@ -181,8 +214,26 @@ try {
     arguments: { root: tmpRoot, text: "Smoke daemon protocol surface", limit: 5 }
   });
   const coverageText = String(coverage.content?.[0]?.text ?? "");
-  if (!coverageText.includes('"score"') || !coverageText.includes('"matchedTerms"')) {
-    throw new Error("proteus_query_duplicates did not return coverage metadata");
+  if (!coverageText.includes('"entityType": "source"') || coverageText.includes('"entityType": "round"')) {
+    throw new Error("proteus_query_duplicates should only return finding/report source coverage");
+  }
+  await request("tools/call", {
+    name: "proteus_record_gate",
+    arguments: {
+      root: tmpRoot,
+      entityType: "hypothesis",
+      entityId: 1,
+      gate: "G1 root cause in target",
+      status: "pending",
+      summary: "MCP gate smoke"
+    }
+  });
+  const gates = await request("tools/call", {
+    name: "proteus_list_records",
+    arguments: { root: tmpRoot, recordType: "gates", entityType: "hypothesis", entityId: 1 }
+  });
+  if (!String(gates.content?.[0]?.text ?? "").includes("MCP gate smoke")) {
+    throw new Error("proteus_list_records did not return recorded gate");
   }
   const record = await request("tools/call", {
     name: "proteus_get_record",
@@ -196,8 +247,8 @@ try {
     name: "proteus_query_revisit",
     arguments: { root: tmpRoot, surface: "Smoke daemon protocol surface" }
   });
-  if (String(revisit.content?.[0]?.text ?? "") !== "[]") {
-    throw new Error("proteus_query_revisit should be empty before target-specific surfaces exist in memory");
+  if (!String(revisit.content?.[0]?.text ?? "").includes("Smoke daemon protocol surface")) {
+    throw new Error("proteus_query_revisit did not return recorded surface");
   }
 
   console.log(`Proteus MCP smoke test passed: ${tmpRoot}`);

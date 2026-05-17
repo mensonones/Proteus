@@ -6,7 +6,8 @@ import type {
   HypothesisInput,
   RoiFactors,
   SurfaceInput,
-  TargetContract
+  TargetContract,
+  ValidationGateInput
 } from "./types";
 
 type Parser<T> = { parse(input: unknown): T };
@@ -97,6 +98,21 @@ export const decisionInputSchema: Parser<DecisionInput> = {
       entityId: requiredNumber(value.entityId, "entityId"),
       decision: requiredString(value.decision, "decision"),
       reason: requiredString(value.reason, "reason"),
+      evidenceIds: numberArray(value.evidenceIds),
+      actor: optionalString(value.actor, "coordinator")
+    };
+  }
+};
+
+export const validationGateInputSchema: Parser<ValidationGateInput> = {
+  parse(input: unknown): ValidationGateInput {
+    const value = object(input, "validation gate");
+    return {
+      entityType: requiredString(value.entityType, "entityType"),
+      entityId: requiredNumber(value.entityId, "entityId"),
+      gate: requiredString(value.gate, "gate"),
+      status: enumValue(value.status, ["pending", "pass", "fail", "blocked", "not_applicable"], "pending"),
+      summary: optionalString(value.summary, ""),
       evidenceIds: numberArray(value.evidenceIds),
       actor: optionalString(value.actor, "coordinator")
     };

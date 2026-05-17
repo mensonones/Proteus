@@ -61,7 +61,7 @@ proteus --version
 Expected:
 
 ```text
-@rafabd1/proteus 0.1.28
+@rafabd1/proteus 0.1.29
 ```
 
 The codeload tarball is the recommended install path while Proteus is distributed
@@ -311,15 +311,19 @@ proteus observe [--root <path>]
 proteus plan-round [--root <path>] [--objective <text>] [--context <text>] [--plan-json <path>] [--write]
 proteus roles
 proteus prompt --role <argus|loom|chaos|libris|mimic|artificer|skeptic> --surface <text>
+proteus record surface --name <text> [--family <text>] [--files a,b] [--status active|covered|exhausted|low_roi|blocked|watch]
 proteus record hypothesis --title <text> [--surface-id <id>] [--impact <text>]
 proteus record evidence --title <text> [--kind <kind>] [--body <text>]
 proteus record decision --entity-type <type> --entity-id <id> --decision <text> --reason <text>
+proteus record gate --entity-type <type> --entity-id <id> --gate <G1|...> [--status pending|pass|fail|blocked|not_applicable]
 proteus record agent-output --round-id <id> --role <codename> --surface <text>
+proteus list surfaces|hypotheses|evidence|decisions|gates [--limit <n>]
 proteus update surface --id <id> [--status exhausted|low_roi|covered|blocked|watch] [--revisit <text>]
 proteus query duplicates <text>
 proteus query memory <text>
 proteus query revisit <surface>
-proteus show <source|surface|hypothesis|evidence|decision|round|agent_output|lab> <id>
+proteus query surfaces <text>
+proteus show <source|surface|hypothesis|evidence|decision|gate|round|agent_output|lab> <id>
 proteus export [--root <path>]
 proteus lab create --candidate-id <id> [--name <name>]
 proteus learn add --title <text> [--category <category>] [--scope <scope>] [--body <text>] [--tags a,b]
@@ -358,11 +362,15 @@ proteus_plan_round
 proteus_roles
 proteus_prompt
 proteus_query_memory
+proteus_query_surfaces
 proteus_get_record
+proteus_list_records
 proteus_query_duplicates
+proteus_record_surface
 proteus_record_hypothesis
 proteus_record_evidence
 proteus_record_decision
+proteus_record_gate
 proteus_record_agent_output
 proteus_update_surface
 proteus_query_revisit

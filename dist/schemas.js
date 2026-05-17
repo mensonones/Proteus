@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.globalLearningInputSchema = exports.decisionInputSchema = exports.evidenceInputSchema = exports.hypothesisInputSchema = exports.surfaceInputSchema = exports.targetContractSchema = void 0;
+exports.globalLearningInputSchema = exports.validationGateInputSchema = exports.decisionInputSchema = exports.evidenceInputSchema = exports.hypothesisInputSchema = exports.surfaceInputSchema = exports.targetContractSchema = void 0;
 exports.targetContractSchema = {
     parse(input) {
         const value = object(input, "target contract");
@@ -79,6 +79,20 @@ exports.decisionInputSchema = {
             entityId: requiredNumber(value.entityId, "entityId"),
             decision: requiredString(value.decision, "decision"),
             reason: requiredString(value.reason, "reason"),
+            evidenceIds: numberArray(value.evidenceIds),
+            actor: optionalString(value.actor, "coordinator")
+        };
+    }
+};
+exports.validationGateInputSchema = {
+    parse(input) {
+        const value = object(input, "validation gate");
+        return {
+            entityType: requiredString(value.entityType, "entityType"),
+            entityId: requiredNumber(value.entityId, "entityId"),
+            gate: requiredString(value.gate, "gate"),
+            status: enumValue(value.status, ["pending", "pass", "fail", "blocked", "not_applicable"], "pending"),
+            summary: optionalString(value.summary, ""),
             evidenceIds: numberArray(value.evidenceIds),
             actor: optionalString(value.actor, "coordinator")
         };

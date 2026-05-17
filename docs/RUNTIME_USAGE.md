@@ -149,31 +149,45 @@ skeptic
 ## Record Research State
 
 ```powershell
+node dist/cli.js record surface --name "Auth/session boundary" --family "auth-session" --files "src/auth.ts,src/session.ts" --status active --revisit "New auth mode, new tenant boundary, or invalidated kill reason"
+
 node dist/cli.js record hypothesis --title "Tenant state reused across request boundary" --impact "possible unauthorized read" --score 72
 
 node dist/cli.js record evidence --title "Negative control output" --kind command-output --body "403 for unrelated tenant"
 
+node dist/cli.js record gate --entity-type hypothesis --entity-id 1 --gate "G2 realistic external attacker input" --status pass --summary "Reproduced through normal request input" --evidence-ids 1
+
 node dist/cli.js record decision --entity-type hypothesis --entity-id 1 --decision discarded --reason "Expected behavior documented in official guide"
 ```
+
+Use `record surface` for target-specific components and areas the coordinator
+has actually selected or reviewed. `update surface` changes status and revisit
+conditions after work has happened; it is not a creation command.
 
 ## Query Memory
 
 ```powershell
 node dist/cli.js query duplicates "tenant state reused"
 node dist/cli.js query memory "tenant state reused"
+node dist/cli.js query surfaces "auth"
+node dist/cli.js list surfaces
+node dist/cli.js list hypotheses
+node dist/cli.js list evidence
+node dist/cli.js list decisions
+node dist/cli.js list gates --entity-type hypothesis --entity-id 1
 node dist/cli.js show source 1
 node dist/cli.js query revisit "auth"
 ```
 
-`query duplicates` is a coverage check over SQL memory. It favors hypotheses,
-decisions, evidence, agent outputs, rounds, surfaces, and ingested
-findings/reports/advisories/discard/watchlist/candidate-register files. Generic
-docs and broad source logs stay searchable through `query memory`, but they are
-not treated as duplicate coverage. Results are compact rows with
-`entityType#id`, score, matched terms, reason, and summary. Use
-`show <entityType> <id>` to inspect the complete record.
+`query duplicates` is intentionally narrow. It searches ingested
+findings/reports/discard/watchlist/candidate-register style source records for
+possible duplicate prior coverage. It does not search hypotheses, decisions,
+evidence, rounds, or generic docs.
 
-`query memory` is the broader FTS search for exploratory lookup.
+Use `query memory` for broad FTS recall across hypotheses, decisions, evidence,
+gates, rounds, surfaces, reports, docs, and agent outputs. Use `list` commands
+when the agent needs structured records by category. Use
+`show <entityType> <id>` to inspect the complete record.
 
 ## Record Global Learnings
 
@@ -228,6 +242,7 @@ Exports:
 target-contract.md
 surface-map.md
 candidate-register.md
+validation-gates.md
 research-log.md
 ```
 
@@ -257,8 +272,15 @@ proteus_ingest
 proteus_observe
 proteus_plan_round
 proteus_query_duplicates
+proteus_query_memory
+proteus_query_surfaces
+proteus_list_records
+proteus_get_record
+proteus_record_surface
 proteus_record_hypothesis
+proteus_record_evidence
 proteus_record_decision
+proteus_record_gate
 proteus_record_agent_output
 proteus_update_surface
 proteus_export

@@ -108,10 +108,10 @@ only relevant items into the round plan.
 
 Treat `.vros/memory.sqlite` as the source of truth. Local Markdown files are
 exports for human reading, not the primary state store. Use
-`proteus query duplicates` only for duplicate checks against ingested
-findings/reports/discard/watchlist/candidate-register style records. Use
-`proteus query memory` for broad exploratory full-text search across hypotheses,
-decisions, evidence, validation gates, rounds, surfaces, reports, docs, and
+`proteus query duplicates` only for duplicate checks against ingested finding
+and report records. Use `proteus query memory` for broad exploratory full-text
+search across hypotheses, decisions, evidence, validation gates, rounds,
+surfaces, reports, docs, watchlists, discarded paths, candidate registers, and
 agent outputs. Use `proteus list ...` for structured category views and
 `proteus show <entityType> <id>` when the full record is needed.
 
@@ -329,6 +329,12 @@ work:
 - Use `proteus query memory` for broad exploratory search when you need raw text
   recall. Do not use broad FTS results as a duplicate verdict without checking
   the full record.
+- Use specific structured views for dedupe context before making strategic
+  decisions: `proteus list decisions`, `proteus list evidence`,
+  `proteus list gates`, `proteus list surfaces`, and targeted
+  `proteus query surfaces` calls. These are better than a broad duplicate check
+  for answering "was this area already killed, gated, blocked, downgraded, or
+  covered?"
 - Use `proteus record hypothesis` as soon as a concrete candidate, watchlist
   item, or discarded idea has a name, primitive, attacker boundary, and impact
   claim. Record weak or killed ideas too if they are likely to be rediscovered.

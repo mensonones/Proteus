@@ -61,9 +61,11 @@ proteus lab create --root <target-root> --candidate-id <id> --name <name>
 proteus export --root <target-root>
 ```
 
-Use `query duplicates` for compact coverage checks against SQL memory. Use
-`query memory` for broad text search. Use `show` to inspect a full record from a
-returned `entityType#id`.
+Use `query duplicates` only for compact finding/report duplicate checks. Use
+`query memory` for broad text search, and use structured lists such as
+`list decisions`, `list evidence`, `list gates`, and `list surfaces` to decide
+whether an area was already killed, blocked, downgraded, or covered. Use `show`
+to inspect a full record from a returned `entityType#id`.
 
 Record global reusable lessons with `proteus learn add` only when they are not
 target-specific vulnerability claims.

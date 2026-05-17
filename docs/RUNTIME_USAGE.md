@@ -179,15 +179,16 @@ node dist/cli.js show source 1
 node dist/cli.js query revisit "auth"
 ```
 
-`query duplicates` is intentionally narrow. It searches ingested
-findings/reports/discard/watchlist/candidate-register style source records for
-possible duplicate prior coverage. It does not search hypotheses, decisions,
-evidence, rounds, or generic docs.
+`query duplicates` is intentionally narrow. It searches only ingested finding
+and report source records for possible duplicate prior coverage. It does not
+search hypotheses, decisions, evidence, rounds, generic docs, watchlists,
+discarded paths, or candidate registers.
 
 Use `query memory` for broad FTS recall across hypotheses, decisions, evidence,
-gates, rounds, surfaces, reports, docs, and agent outputs. Use `list` commands
-when the agent needs structured records by category. Use
-`show <entityType> <id>` to inspect the complete record.
+gates, rounds, surfaces, reports, docs, watchlists, discarded paths, candidate
+registers, and agent outputs. Use `list` commands when the agent needs
+structured records by category, such as decisions, evidence, gates, and
+surfaces. Use `show <entityType> <id>` to inspect the complete record.
 
 ## Record Global Learnings
 

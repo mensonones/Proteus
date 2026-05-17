@@ -97,6 +97,10 @@ try {
     "# General Note\n\nGeneric glossary mention of broad-only cache glossary phrase.\n"
   );
   fs.writeFileSync(
+    path.join(tmpRoot, "docs", "watchlist.md"),
+    "# Watchlist\n\nValidation gate watchlist text should stay available in broad memory but not count as duplicate coverage.\n"
+  );
+  fs.writeFileSync(
     path.join(tmpRoot, "server.ts"),
     "export function handler(request: Request) { return request.url; }\n"
   );
@@ -251,6 +255,9 @@ try {
   if (!duplicates.includes("source#") || duplicates.includes("hypothesis#")) {
     throw new Error("duplicate coverage query should only return finding/report style source records");
   }
+  if (duplicates.includes("watchlist.md")) {
+    throw new Error("duplicate coverage query returned watchlist source as duplicate coverage");
+  }
   if (!duplicates.includes("score=") || !duplicates.includes("matched=")) {
     throw new Error("duplicate coverage query did not return summarized coverage metadata");
   }
@@ -265,6 +272,14 @@ try {
   const broadMemory = run(["query", "memory", "broad-only cache glossary phrase"]);
   if (!broadMemory.includes("source#")) {
     throw new Error("memory query did not return generic docs");
+  }
+  const watchlistDuplicate = run(["query", "duplicates", "watchlist text"]);
+  if (!watchlistDuplicate.includes("No prior coverage found.")) {
+    throw new Error("duplicate coverage query returned watchlist-only memory as duplicate coverage");
+  }
+  const watchlistMemory = run(["query", "memory", "watchlist text"]);
+  if (!watchlistMemory.includes("source#")) {
+    throw new Error("memory query did not return watchlist source");
   }
   const sourceId = memory.match(/source#(\d+)/)?.[1];
   if (!sourceId) {

@@ -873,7 +873,7 @@ type ScoredCoverageCandidate = CoverageCandidate & {
 
 type Row = Record<string, unknown>;
 
-const duplicateSourceKinds = new Set(["finding", "report", "discarded", "watchlist", "candidate_register"]);
+const duplicateSourceKinds = new Set(["finding", "report"]);
 
 function toSourceRow(row: Row): SourceRow {
   return {

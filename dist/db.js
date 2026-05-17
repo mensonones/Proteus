@@ -534,7 +534,7 @@ class ProteusDb {
     }
 }
 exports.ProteusDb = ProteusDb;
-const duplicateSourceKinds = new Set(["finding", "report", "discarded", "watchlist", "candidate_register"]);
+const duplicateSourceKinds = new Set(["finding", "report"]);
 function toSourceRow(row) {
     return {
         id: Number(row.id),

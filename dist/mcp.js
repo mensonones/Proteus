@@ -193,10 +193,30 @@ const tools = [
             status: stringProp("active, paused, completed, blocked, or superseded."),
             currentStateSummary: stringProp("Updated current-state summary."),
             recentLearningSummary: stringProp("Updated recent-learning summary."),
-            summary: stringProp("Timeline event summary.")
+            summary: stringProp("Timeline event summary."),
+            confirmed: arrayProp("Confirmed facts."),
+            killed: arrayProp("Killed paths."),
+            open: arrayProp("Open branches or questions."),
+            pivots: arrayProp("Pivots."),
+            scoreChanges: arrayProp("Branch score changes."),
+            contextToPersist: arrayProp("Context to persist."),
+            nextHighRoiMove: stringProp("Next high-ROI move."),
+            contractSignature: objectProp("Contract signature object.")
         }, ["root", "id"]),
         handler: (input) => withDb(str(input.root), (db) => {
             const id = num(input.id, 0);
+            const checkpointId = db.addCampaignCheckpoint({
+                campaignId: id,
+                confirmed: stringArray(input.confirmed),
+                killed: stringArray(input.killed),
+                open: stringArray(input.open),
+                pivots: stringArray(input.pivots),
+                scoreChanges: stringArray(input.scoreChanges),
+                contextToPersist: stringArray(input.contextToPersist),
+                nextHighRoiMove: maybeStr(input.nextHighRoiMove) ?? "",
+                contractSignature: (objectValue(input.contractSignature) ?? {}),
+                summary: maybeStr(input.summary) ?? ""
+            });
             db.updateCampaign({
                 id,
                 status: maybeCampaignStatus(input.status),
@@ -204,7 +224,13 @@ const tools = [
                 recentLearningSummary: maybeStr(input.recentLearningSummary),
                 eventSummary: maybeStr(input.summary) ?? "Campaign checkpoint recorded."
             });
-            return toolEnvelope({ entityType: "campaign", entityId: id, campaign: db.getCampaign(id) }, { stateDelta: { created: [], linked: [], updated: [{ entityType: "campaign", entityId: id }] } });
+            return toolEnvelope({ entityType: "campaign", entityId: id, campaign: db.getCampaign(id), checkpointId }, {
+                stateDelta: {
+                    created: [{ entityType: "campaign_checkpoint", entityId: checkpointId }],
+                    linked: [],
+                    updated: [{ entityType: "campaign", entityId: id }]
+                }
+            });
         })
     },
     {

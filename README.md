@@ -172,6 +172,7 @@ Create or resume campaign-scoped state:
 proteus campaign create --root C:\path\to\target --title "Recent-delta research" --objective "Find high-ROI, non-obvious chains"
 proteus campaign resume --root C:\path\to\target
 proteus branch add --root C:\path\to\target --campaign-id 1 --title "Cache authority branch" --primitive "attacker-controlled state transition"
+proteus campaign checkpoint --root C:\path\to\target --id 1 --confirmed "auth boundary mapped" --open "cache authority branch" --next "validate branch control"
 proteus link --root C:\path\to\target --from-type campaign --from-id 1 --relation has_round --to-type round --to-id 1
 ```
 
@@ -335,7 +336,7 @@ proteus observe [--root <path>]
 proteus plan-round [--root <path>] [--objective <text>] [--context <text>] [--plan-json <path>] [--status active|paused|completed|blocked|planned|superseded] [--write]
 proteus campaign create --title <text> [--objective <text>]
 proteus campaign resume [--id <id>]
-proteus campaign checkpoint --id <id> [--state <text>] [--learnings <text>]
+proteus campaign checkpoint --id <id> [--confirmed a,b] [--killed a,b] [--open a,b] [--pivots a,b] [--context a,b] [--next <text>] [--contract-signature <json>]
 proteus branch add --title <text> [--campaign-id <id>] [--round-id <id>]
 proteus link --from-type <type> --from-id <id> --relation <text> --to-type <type> --to-id <id>
 proteus roles
@@ -346,7 +347,7 @@ proteus record evidence --title <text> [--kind <kind>] [--body <text>]
 proteus record decision --entity-type <type> --entity-id <id> --decision <text> --reason <text>
 proteus record gate --entity-type <type> --entity-id <id> --gate <G1|...> [--status pending|pass|fail|blocked|not_applicable]
 proteus record agent-output --round-id <id> --role <codename> --surface <text>
-proteus list surfaces|hypotheses|evidence|decisions|gates|rounds|campaigns|branches|links [--status <status>] [--limit <n>]
+proteus list surfaces|hypotheses|evidence|decisions|gates|rounds|campaigns|branches|links|checkpoints [--status <status>] [--limit <n>]
 proteus update surface --id <id> [--status exhausted|low_roi|covered|blocked|watch] [--revisit <text>]
 proteus update round --id <id> --status active|paused|completed|blocked|planned|superseded
 proteus update rounds --from planned --status superseded [--keep-latest]
@@ -355,7 +356,7 @@ proteus query memory <text>
 proteus query similar <text>
 proteus query revisit <surface>
 proteus query surfaces <text>
-proteus show <source|surface|hypothesis|evidence|decision|gate|round|campaign|branch|entity_link|agent_output|lab> <id>
+proteus show <source|surface|hypothesis|evidence|decision|gate|round|campaign|branch|checkpoint|entity_link|agent_output|lab> <id>
 proteus export [--root <path>]
 proteus lab create --candidate-id <id> [--name <name>]
 proteus learn add --title <text> [--category <category>] [--scope <scope>] [--body <text>] [--tags a,b]

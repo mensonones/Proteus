@@ -543,6 +543,63 @@ export class ProteusDb {
     return id;
   }
 
+  addCampaignCheckpoint(input: {
+    campaignId: number;
+    confirmed: JsonValue;
+    killed: JsonValue;
+    open: JsonValue;
+    pivots: JsonValue;
+    scoreChanges: JsonValue;
+    contextToPersist: JsonValue;
+    nextHighRoiMove: string;
+    contractSignature: JsonValue;
+    summary?: string;
+  }): number {
+    const now = nowIso();
+    const result = this.db
+      .prepare(
+        `INSERT INTO campaign_checkpoints
+          (campaign_id, confirmed_json, killed_json, open_json, pivots_json,
+           score_changes_json, context_to_persist_json, next_high_roi_move,
+           contract_signature_json, summary, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      )
+      .run(
+        input.campaignId,
+        json(input.confirmed),
+        json(input.killed),
+        json(input.open),
+        json(input.pivots),
+        json(input.scoreChanges),
+        json(input.contextToPersist),
+        input.nextHighRoiMove,
+        json(input.contractSignature),
+        input.summary ?? "",
+        now
+      );
+    const id = Number(result.lastInsertRowid);
+    this.indexFts(
+      "campaign_checkpoint",
+      id,
+      `${input.summary ?? ""}\n${input.nextHighRoiMove}\n${json(input.confirmed)}\n${json(input.killed)}\n${json(input.open)}`
+    );
+    this.addCampaignEvent({
+      campaignId: input.campaignId,
+      eventType: "campaign_checkpoint_recorded",
+      entityType: "campaign_checkpoint",
+      entityId: id,
+      summary: input.summary ?? `Checkpoint recorded; next move: ${input.nextHighRoiMove || "unspecified"}`
+    });
+    return id;
+  }
+
+  listCampaignCheckpoints(campaignId: number, limit = 10): CampaignCheckpointRow[] {
+    return this.db
+      .prepare("SELECT * FROM campaign_checkpoints WHERE campaign_id = ? ORDER BY id DESC LIMIT ?")
+      .all(campaignId, limit)
+      .map(toCampaignCheckpointRow);
+  }
+
   listCampaignEvents(campaignId: number, limit = 25): CampaignEventRow[] {
     return this.db
       .prepare("SELECT * FROM campaign_events WHERE campaign_id = ? ORDER BY id DESC LIMIT ?")
@@ -636,12 +693,14 @@ export class ProteusDb {
     const rounds = this.listRounds().filter((round) => linkedRoundIds.includes(round.id) || round.status === "active").slice(0, 10);
     const branches = this.listHypothesisBranches({ campaignId, limit: 20 });
     const events = this.listCampaignEvents(campaignId, 15);
+    const checkpoints = this.listCampaignCheckpoints(campaignId, 5);
     return {
       campaign,
       activeRounds: rounds.filter((round) => round.status === "active"),
       openBranches: branches.filter((branch) => branch.status === "open" || branch.status === "testing"),
       killedBranches: branches.filter((branch) => branch.status === "killed").slice(0, 10),
       recentEvents: events,
+      recentCheckpoints: checkpoints,
       links
     };
   }
@@ -929,6 +988,7 @@ export class ProteusDb {
     `);
     this.applyMigration("2026-05-17-validation-gates-surfaces-and-focused-duplicates", BASE_SCHEMA_SQL);
     this.applyMigration("2026-06-17-campaigns-links-branches", CAMPAIGN_SCHEMA_SQL);
+    this.applyMigration("2026-06-17-campaign-checkpoints", CAMPAIGN_CHECKPOINT_SCHEMA_SQL);
   }
 
   private applyMigration(version: string, sql: string): void {
@@ -1175,6 +1235,23 @@ const CAMPAIGN_SCHEMA_SQL = `
       );
 `;
 
+const CAMPAIGN_CHECKPOINT_SCHEMA_SQL = `
+      CREATE TABLE IF NOT EXISTS campaign_checkpoints (
+        id INTEGER PRIMARY KEY,
+        campaign_id INTEGER NOT NULL REFERENCES campaigns(id) ON DELETE CASCADE,
+        confirmed_json TEXT NOT NULL,
+        killed_json TEXT NOT NULL,
+        open_json TEXT NOT NULL,
+        pivots_json TEXT NOT NULL,
+        score_changes_json TEXT NOT NULL,
+        context_to_persist_json TEXT NOT NULL,
+        next_high_roi_move TEXT NOT NULL,
+        contract_signature_json TEXT NOT NULL,
+        summary TEXT,
+        created_at TEXT NOT NULL
+      );
+`;
+
 export interface SurfaceRow {
   id: number;
   name: string;
@@ -1285,6 +1362,21 @@ export interface CampaignEventRow {
   createdAt: string;
 }
 
+export interface CampaignCheckpointRow {
+  id: number;
+  campaignId: number;
+  confirmed: JsonValue;
+  killed: JsonValue;
+  open: JsonValue;
+  pivots: JsonValue;
+  scoreChanges: JsonValue;
+  contextToPersist: JsonValue;
+  nextHighRoiMove: string;
+  contractSignature: JsonValue;
+  summary: string;
+  createdAt: string;
+}
+
 export interface HypothesisBranchRow {
   id: number;
   campaignId: number | null;
@@ -1311,6 +1403,7 @@ export interface CampaignDigest {
   openBranches: HypothesisBranchRow[];
   killedBranches: HypothesisBranchRow[];
   recentEvents: CampaignEventRow[];
+  recentCheckpoints: CampaignCheckpointRow[];
   links: EntityLinkRow[];
 }
 
@@ -1536,6 +1629,23 @@ function toCampaignEventRow(row: Row): CampaignEventRow {
   };
 }
 
+function toCampaignCheckpointRow(row: Row): CampaignCheckpointRow {
+  return {
+    id: Number(row.id),
+    campaignId: Number(row.campaign_id),
+    confirmed: parseJson(String(row.confirmed_json)),
+    killed: parseJson(String(row.killed_json)),
+    open: parseJson(String(row.open_json)),
+    pivots: parseJson(String(row.pivots_json)),
+    scoreChanges: parseJson(String(row.score_changes_json)),
+    contextToPersist: parseJson(String(row.context_to_persist_json)),
+    nextHighRoiMove: String(row.next_high_roi_move),
+    contractSignature: parseJson(String(row.contract_signature_json)),
+    summary: String(row.summary ?? ""),
+    createdAt: String(row.created_at)
+  };
+}
+
 function toHypothesisBranchRow(row: Row): HypothesisBranchRow {
   return {
     id: Number(row.id),
@@ -1689,6 +1799,7 @@ function entityRank(entityType: string): number {
     "evidence",
     "round",
     "campaign_event",
+    "campaign_checkpoint",
     "entity_link",
     "lab"
   ].indexOf(entityType);
@@ -1727,6 +1838,8 @@ function tableForEntity(entityType: string): string | null {
     campaign: "campaigns",
     entity_link: "entity_links",
     campaign_event: "campaign_events",
+    campaign_checkpoint: "campaign_checkpoints",
+    checkpoint: "campaign_checkpoints",
     hypothesis_branch: "hypothesis_branches",
     branch: "hypothesis_branches",
     agent_output: "agent_outputs",
@@ -1768,6 +1881,9 @@ function materializeRecord(entityType: string, row: Row): Record<string, unknown
       summary: event.summary,
       createdAt: event.createdAt
     };
+  }
+  if (entityType === "campaign_checkpoint" || entityType === "checkpoint") {
+    return { entityType: "campaign_checkpoint", ...toCampaignCheckpointRow(row) };
   }
   if (entityType === "hypothesis_branch" || entityType === "branch") {
     return { entityType: "hypothesis_branch", ...toHypothesisBranchRow(row) };

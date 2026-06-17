@@ -211,6 +211,38 @@ try {
   if (!branches.includes("B1 [open] Smoke branch")) {
     throw new Error("branch list did not return recorded branch");
   }
+  run([
+    "campaign",
+    "checkpoint",
+    "--id",
+    "1",
+    "--confirmed",
+    "surface mapped",
+    "--open",
+    "Smoke branch",
+    "--pivots",
+    "stay on transition boundary",
+    "--context",
+    "Smoke context capsule",
+    "--next",
+    "Validate smoke branch",
+    "--contract-signature",
+    "{\"status\":\"compliant\",\"agent\":\"smoke\"}",
+    "--summary",
+    "Smoke checkpoint"
+  ]);
+  const checkpoints = run(["list", "checkpoints", "--campaign-id", "1"]);
+  if (!checkpoints.includes("K1 campaign=C1") || !checkpoints.includes("Validate smoke branch")) {
+    throw new Error("list checkpoints did not return recorded checkpoint");
+  }
+  const checkpointRecord = run(["show", "checkpoint", "1"]);
+  if (!checkpointRecord.includes('"entityType": "campaign_checkpoint"') || !checkpointRecord.includes("Smoke context capsule")) {
+    throw new Error("show checkpoint did not return campaign checkpoint record");
+  }
+  const campaignDigestWithCheckpoint = run(["campaign", "resume"]);
+  if (!campaignDigestWithCheckpoint.includes('"recentCheckpoints"') || !campaignDigestWithCheckpoint.includes("Validate smoke branch")) {
+    throw new Error("campaign resume did not include recent checkpoints");
+  }
   run(["link", "--from-type", "campaign", "--from-id", "1", "--relation", "has_round", "--to-type", "round", "--to-id", "1"]);
   const links = run(["list", "links", "--entity-type", "campaign", "--entity-id", "1"]);
   if (!links.includes("campaign#1 -[has_round]-> round#1")) {

@@ -168,6 +168,31 @@ try {
       killConditions: ["control fails"]
     }
   });
+  const checkpoint = await request("tools/call", {
+    name: "proteus_campaign_checkpoint",
+    arguments: {
+      root: tmpRoot,
+      id: 1,
+      confirmed: ["surface mapped"],
+      open: ["MCP smoke branch"],
+      pivots: ["stay on daemon boundary"],
+      contextToPersist: ["MCP checkpoint context"],
+      nextHighRoiMove: "Validate MCP smoke branch",
+      contractSignature: { status: "compliant", agent: "mcp-smoke" },
+      summary: "MCP smoke checkpoint"
+    }
+  });
+  const checkpointText = String(checkpoint.content?.[0]?.text ?? "");
+  if (!checkpointText.includes('"checkpointId"') || !checkpointText.includes('"campaign_checkpoint"')) {
+    throw new Error("proteus_campaign_checkpoint did not return the structured checkpoint envelope");
+  }
+  const checkpointRecord = await request("tools/call", {
+    name: "proteus_get_record",
+    arguments: { root: tmpRoot, entityType: "checkpoint", entityId: 1 }
+  });
+  if (!String(checkpointRecord.content?.[0]?.text ?? "").includes("MCP checkpoint context")) {
+    throw new Error("proteus_get_record did not return the campaign checkpoint");
+  }
   await request("tools/call", {
     name: "proteus_link_entities",
     arguments: { root: tmpRoot, fromType: "campaign", fromId: 1, relation: "has_round", toType: "round", toId: 1 }

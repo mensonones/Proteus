@@ -11,7 +11,7 @@ import { planRound, renderRoundPlan } from "./planner";
 import { renderAgentPrompt } from "./prompts";
 import { ROLE_ORDER, ROLES } from "./roles";
 import { ensureDir, exportsDir, resolveTargetRoot } from "./paths";
-import type { AgentCodename, BranchStatus, CampaignStatus, HypothesisInput, RoiFactors, RoundStatus, SurfaceStatus } from "./types";
+import type { AgentCodename, BranchStatus, CampaignStatus, HypothesisInput, JsonValue, RoiFactors, RoundStatus, SurfaceStatus } from "./types";
 
 interface ParsedArgs {
   command: string[];
@@ -232,6 +232,18 @@ function cmdCampaign(db: ProteusDb, subcommand: string | undefined, parsed: Pars
 
   if (subcommand === "checkpoint") {
     const id = requiredNumber(parsed, "id");
+    const checkpointId = db.addCampaignCheckpoint({
+      campaignId: id,
+      confirmed: splitList(getString(parsed, "confirmed") ?? ""),
+      killed: splitList(getString(parsed, "killed") ?? ""),
+      open: splitList(getString(parsed, "open") ?? ""),
+      pivots: splitList(getString(parsed, "pivots") ?? ""),
+      scoreChanges: splitList(getString(parsed, "score-changes") ?? ""),
+      contextToPersist: splitList(getString(parsed, "context") ?? ""),
+      nextHighRoiMove: getString(parsed, "next") ?? "",
+      contractSignature: parseJsonFlag(getString(parsed, "contract-signature")) ?? {},
+      summary: getString(parsed, "summary") ?? ""
+    });
     db.updateCampaign({
       id,
       status: campaignStatus(parsed),
@@ -239,7 +251,7 @@ function cmdCampaign(db: ProteusDb, subcommand: string | undefined, parsed: Pars
       recentLearningSummary: getString(parsed, "learnings"),
       eventSummary: getString(parsed, "summary") ?? "Campaign checkpoint recorded."
     });
-    console.log(`Checkpointed campaign C${id}`);
+    console.log(`Checkpointed campaign C${id} as K${checkpointId}`);
     return;
   }
 
@@ -588,7 +600,18 @@ function cmdList(db: ProteusDb, subcommand: string | undefined, parsed: ParsedAr
     return;
   }
 
-  throw new Error("list requires one of: surfaces, hypotheses, evidence, decisions, gates, rounds, campaigns, branches, links");
+  if (subcommand === "checkpoints") {
+    const campaignId = requiredNumber(parsed, "campaign-id");
+    const rows = db.listCampaignCheckpoints(campaignId, limit);
+    for (const row of rows) {
+      console.log(`K${row.id} campaign=C${row.campaignId} next=${truncateForCli(row.nextHighRoiMove || "-", 120)}`);
+      console.log(`  confirmed=${arrayLength(row.confirmed)} killed=${arrayLength(row.killed)} open=${arrayLength(row.open)} summary=${truncateForCli(row.summary || "-", 120)}`);
+    }
+    if (rows.length === 0) console.log("No campaign checkpoints recorded.");
+    return;
+  }
+
+  throw new Error("list requires one of: surfaces, hypotheses, evidence, decisions, gates, rounds, campaigns, branches, links, checkpoints");
 }
 
 function cmdUpdate(db: ProteusDb, subcommand: string | undefined, parsed: ParsedArgs): void {
@@ -858,6 +881,26 @@ function splitList(value: string): string[] {
     .filter(Boolean);
 }
 
+function parseJsonFlag(value: string | undefined): JsonValue | undefined {
+  if (!value) return undefined;
+  const parsed = JSON.parse(value) as unknown;
+  if (!isJsonValue(parsed)) {
+    throw new Error("Flag value must be valid JSON.");
+  }
+  return parsed;
+}
+
+function isJsonValue(value: unknown): value is JsonValue {
+  if (value === null) return true;
+  if (typeof value === "string" || typeof value === "boolean") return true;
+  if (typeof value === "number") return Number.isFinite(value);
+  if (Array.isArray(value)) return value.every(isJsonValue);
+  if (typeof value === "object") {
+    return Object.values(value as Record<string, unknown>).every(isJsonValue);
+  }
+  return false;
+}
+
 function roiFromFlags(parsed: ParsedArgs): RoiFactors {
   return {
     impactPotential: getNumber(parsed, "impact-potential") ?? 0,
@@ -982,7 +1025,7 @@ Usage:
   proteus plan-round [--root <path>] [--objective <text>] [--context <text>] [--plan-json <path>] [--status active|paused|completed|blocked|planned|superseded] [--write]
   proteus campaign create --title <text> [--objective <text>] [--status active|paused|completed|blocked|superseded]
   proteus campaign resume [--id <id>]
-  proteus campaign checkpoint --id <id> [--state <text>] [--learnings <text>] [--summary <text>]
+  proteus campaign checkpoint --id <id> [--confirmed a,b] [--killed a,b] [--open a,b] [--next <text>]
   proteus branch add --title <text> [--campaign-id <id>] [--round-id <id>] [--primitive <text>]
   proteus branch list [--campaign-id <id>] [--status open|testing|killed|promoted|blocked]
   proteus link --from-type <type> --from-id <id> --relation <text> --to-type <type> --to-id <id>
@@ -994,7 +1037,7 @@ Usage:
   proteus record decision --entity-type <type> --entity-id <id> --decision <text> --reason <text>
   proteus record gate --entity-type <type> --entity-id <id> --gate <G1|...> [--status pending|pass|fail|blocked|not_applicable]
   proteus record agent-output --round-id <id> --role <codename> --surface <text>
-  proteus list surfaces|hypotheses|evidence|decisions|gates|rounds|campaigns|branches|links [--status <status>] [--limit <n>]
+  proteus list surfaces|hypotheses|evidence|decisions|gates|rounds|campaigns|branches|links|checkpoints [--status <status>] [--limit <n>]
   proteus update surface --id <id> [--status exhausted|low_roi|covered|blocked|watch] [--revisit <text>]
   proteus update round --id <id> --status active|paused|completed|blocked|planned|superseded
   proteus update rounds --from planned --status superseded [--keep-latest]
@@ -1003,7 +1046,7 @@ Usage:
   proteus query similar <text>
   proteus query revisit <surface>
   proteus query surfaces <text>
-  proteus show <source|surface|hypothesis|evidence|decision|gate|round|campaign|branch|entity_link|agent_output|lab> <id>
+  proteus show <source|surface|hypothesis|evidence|decision|gate|round|campaign|branch|checkpoint|entity_link|agent_output|lab> <id>
   proteus export [--root <path>]
   proteus lab create --candidate-id <id> [--name <name>]
   proteus learn add --title <text> [--category <category>] [--scope <scope>] [--body <text>] [--tags a,b]

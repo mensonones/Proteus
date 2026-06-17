@@ -817,6 +817,13 @@ export class ProteusDb {
     return rows.map(({ searchText: _searchText, phraseMatched: _phraseMatched, ...row }) => row);
   }
 
+  querySimilar(query: string, limit = 10): SimilarityResult {
+    return {
+      duplicateCoverage: this.queryCoverage(query, Math.max(3, Math.ceil(limit / 2))),
+      memoryMatches: this.search(query, limit)
+    };
+  }
+
   getRecord(entityType: string, entityId: number): Record<string, unknown> | null {
     const table = tableForEntity(entityType);
     if (!table) throw new Error(`Unsupported entity type: ${entityType}`);
@@ -1324,6 +1331,11 @@ export interface CoverageRow {
   matchedTerms: string[];
   reason: string;
   summary: string;
+}
+
+export interface SimilarityResult {
+  duplicateCoverage: CoverageRow[];
+  memoryMatches: SearchRow[];
 }
 
 export interface MemoryStats {

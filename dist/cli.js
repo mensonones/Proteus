@@ -629,6 +629,28 @@ function cmdQuery(db, subcommand, parsed) {
             console.log(`${row.entityType}#${row.entityId}: ${row.snippet}`);
         return;
     }
+    if (subcommand === "similar") {
+        const text = parsed.command.slice(2).join(" ") || requiredString(parsed, "text");
+        const result = db.querySimilar(text, getNumber(parsed, "limit") ?? 10);
+        console.log("Duplicate/report coverage:");
+        if (result.duplicateCoverage.length === 0) {
+            console.log("  none");
+        }
+        else {
+            for (const row of result.duplicateCoverage) {
+                console.log(`  ${row.entityType}#${row.entityId} score=${row.score} ${row.status ? `status=${row.status} ` : ""}${row.title}`);
+            }
+        }
+        console.log("Memory matches:");
+        if (result.memoryMatches.length === 0) {
+            console.log("  none");
+        }
+        else {
+            for (const row of result.memoryMatches)
+                console.log(`  ${row.entityType}#${row.entityId}: ${row.snippet}`);
+        }
+        return;
+    }
     if (subcommand === "revisit") {
         const text = parsed.command.slice(2).join(" ") || requiredString(parsed, "surface");
         const rows = db
@@ -656,7 +678,7 @@ function cmdQuery(db, subcommand, parsed) {
             console.log("No matching surfaces found.");
         return;
     }
-    throw new Error("query requires one of: duplicates, memory, revisit, surfaces");
+    throw new Error("query requires one of: duplicates, memory, similar, revisit, surfaces");
 }
 function cmdShow(db, parsed) {
     requireInitialized(db);
@@ -927,6 +949,7 @@ Usage:
   proteus update rounds --from planned --status superseded [--keep-latest]
   proteus query duplicates <text>
   proteus query memory <text>
+  proteus query similar <text>
   proteus query revisit <surface>
   proteus query surfaces <text>
   proteus show <source|surface|hypothesis|evidence|decision|gate|round|campaign|branch|entity_link|agent_output|lab> <id>

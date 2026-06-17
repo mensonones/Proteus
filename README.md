@@ -352,6 +352,7 @@ proteus update round --id <id> --status active|paused|completed|blocked|planned|
 proteus update rounds --from planned --status superseded [--keep-latest]
 proteus query duplicates <text>
 proteus query memory <text>
+proteus query similar <text>
 proteus query revisit <surface>
 proteus query surfaces <text>
 proteus show <source|surface|hypothesis|evidence|decision|gate|round|campaign|branch|entity_link|agent_output|lab> <id>
@@ -400,6 +401,7 @@ proteus_link_entities
 proteus_roles
 proteus_prompt
 proteus_query_memory
+proteus_query_similar
 proteus_query_surfaces
 proteus_get_record
 proteus_list_records

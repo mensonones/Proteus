@@ -376,6 +376,13 @@ const tools = [
         handler: ({ root, text, limit }) => withDb(str(root), (db) => db.search(str(text), num(limit, 20)))
     },
     {
+        name: "proteus_query_similar",
+        title: "Query Similar Records",
+        description: "Return both narrow finding/report duplicate coverage and broad memory matches for a candidate, primitive, branch, or impact claim.",
+        inputSchema: schema({ root: stringProp("Target root path."), text: stringProp("Candidate, primitive, branch, or impact text."), limit: numberProp("Max rows.") }, ["root", "text"]),
+        handler: ({ root, text, limit }) => withDb(str(root), (db) => toolEnvelope(db.querySimilar(str(text), num(limit, 10))))
+    },
+    {
         name: "proteus_get_record",
         title: "Get Memory Record",
         description: "Return the full SQL memory record for an entityType/entityId pair returned by Proteus queries.",

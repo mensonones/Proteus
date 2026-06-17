@@ -344,6 +344,10 @@ try {
   if (!memory.includes("source#") && !memory.includes("hypothesis#")) {
     throw new Error("memory query did not return indexed records");
   }
+  const similar = run(["query", "similar", "validation gate"]);
+  if (!similar.includes("Duplicate/report coverage:") || !similar.includes("Memory matches:")) {
+    throw new Error("similar query did not return coverage and memory sections");
+  }
   const broadDuplicate = run(["query", "duplicates", "broad-only cache glossary phrase"]);
   if (!broadDuplicate.includes("No prior coverage found.")) {
     throw new Error("duplicate coverage query returned generic docs as coverage");

@@ -497,6 +497,12 @@ class ProteusDb {
             .slice(0, limit);
         return rows.map(({ searchText: _searchText, phraseMatched: _phraseMatched, ...row }) => row);
     }
+    querySimilar(query, limit = 10) {
+        return {
+            duplicateCoverage: this.queryCoverage(query, Math.max(3, Math.ceil(limit / 2))),
+            memoryMatches: this.search(query, limit)
+        };
+    }
     getRecord(entityType, entityId) {
         const table = tableForEntity(entityType);
         if (!table)

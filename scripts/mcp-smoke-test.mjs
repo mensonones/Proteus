@@ -83,6 +83,7 @@ try {
     "proteus_prompt",
     "proteus_query_duplicates",
     "proteus_query_memory",
+    "proteus_query_similar",
     "proteus_get_record",
     "proteus_list_records",
     "proteus_record_surface",
@@ -302,6 +303,14 @@ try {
   const coverageText = String(coverage.content?.[0]?.text ?? "");
   if (!coverageText.includes('"entityType": "source"') || coverageText.includes('"entityType": "round"')) {
     throw new Error("proteus_query_duplicates should only return finding/report source coverage");
+  }
+  const similar = await request("tools/call", {
+    name: "proteus_query_similar",
+    arguments: { root: tmpRoot, text: "Smoke daemon protocol surface", limit: 5 }
+  });
+  const similarText = String(similar.content?.[0]?.text ?? "");
+  if (!similarText.includes("duplicateCoverage") || !similarText.includes("memoryMatches")) {
+    throw new Error("proteus_query_similar did not return duplicate and memory sections");
   }
   await request("tools/call", {
     name: "proteus_record_gate",

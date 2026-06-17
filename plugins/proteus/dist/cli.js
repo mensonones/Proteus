@@ -177,6 +177,13 @@ function cmdPlanRound(db, parsed) {
             currentUnderstanding: getString(parsed, "context")
         };
     const plan = (0, planner_1.planRound)(db, planInput);
+    db.linkActiveCampaignTo({
+        toType: "round",
+        toId: plan.id,
+        relation: "has_round",
+        eventType: "round_linked",
+        eventSummary: `Round linked: ${plan.objective}`
+    });
     const markdown = (0, planner_1.renderRoundPlan)(plan);
     if (getBoolean(parsed, "write")) {
         const out = node_path_1.default.join((0, paths_1.exportsDir)(db.targetRoot), `round-plan-${plan.id}.md`);
@@ -237,8 +244,11 @@ function cmdCampaign(db, subcommand, parsed) {
 function cmdBranch(db, subcommand, parsed) {
     requireInitialized(db);
     if (subcommand === "add" || subcommand === "create") {
+        const explicitCampaignId = getNumber(parsed, "campaign-id");
+        const activeCampaigns = db.listCampaigns("active");
+        const activeCampaignId = explicitCampaignId ?? (activeCampaigns.length === 1 ? activeCampaigns[0].id : undefined);
         const id = db.addHypothesisBranch({
-            campaignId: getNumber(parsed, "campaign-id"),
+            campaignId: activeCampaignId,
             roundId: getNumber(parsed, "round-id"),
             surfaceId: getNumber(parsed, "surface-id"),
             title: requiredString(parsed, "title"),
@@ -258,6 +268,17 @@ function cmdBranch(db, subcommand, parsed) {
             },
             status: branchStatus(parsed) ?? "open"
         });
+        if (activeCampaignId) {
+            db.addEntityLink({
+                fromType: "campaign",
+                fromId: activeCampaignId,
+                toType: "hypothesis_branch",
+                toId: id,
+                relation: "has_branch",
+                confidence: 1,
+                note: "Linked from branch add."
+            });
+        }
         console.log(`Recorded branch B${id}`);
         return;
     }

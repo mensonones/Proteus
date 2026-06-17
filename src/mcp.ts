@@ -144,9 +144,20 @@ const tools: ToolDefinition[] = [
             ]
           : [];
         const record = markdown === true ? renderRoundPlan(plan) : plan;
+        const campaignLink = db.linkActiveCampaignTo({
+          toType: "round",
+          toId: plan.id,
+          relation: "has_round",
+          eventType: "round_linked",
+          eventSummary: `Round linked: ${plan.objective}`
+        });
         return toolEnvelope(record, {
           advisories,
-          stateDelta: { created: [{ entityType: "round", entityId: plan.id }], linked: [], updated: [] }
+          stateDelta: {
+            created: [{ entityType: "round", entityId: plan.id }],
+            linked: campaignLink ? [{ entityType: "entity_link", entityId: campaignLink.linkId }] : [],
+            updated: []
+          }
         });
       })
   },
@@ -297,8 +308,10 @@ const tools: ToolDefinition[] = [
     ),
     handler: (input) =>
       withDb(str(input.root), (db) => {
+        const activeCampaigns = db.listCampaigns("active");
+        const campaignId = maybeNum(input.campaignId) ?? (activeCampaigns.length === 1 ? activeCampaigns[0].id : undefined);
         const id = db.addHypothesisBranch({
-          campaignId: maybeNum(input.campaignId),
+          campaignId,
           roundId: maybeNum(input.roundId),
           surfaceId: maybeNum(input.surfaceId),
           title: str(input.title),
@@ -313,11 +326,26 @@ const tools: ToolDefinition[] = [
           roi: (objectValue(input.roi) ?? {}) as never,
           status: maybeBranchStatus(input.status) ?? "open"
         });
+        const campaignLink = campaignId
+          ? db.addEntityLink({
+              fromType: "campaign",
+              fromId: campaignId,
+              toType: "hypothesis_branch",
+              toId: id,
+              relation: "has_branch",
+              confidence: 1,
+              note: "Linked from proteus_record_branch."
+            })
+          : null;
         return toolEnvelope(
           { entityType: "hypothesis_branch", entityId: id },
           {
             advisories: activeCampaignAdvisories(db),
-            stateDelta: { created: [{ entityType: "hypothesis_branch", entityId: id }], linked: [], updated: [] }
+            stateDelta: {
+              created: [{ entityType: "hypothesis_branch", entityId: id }],
+              linked: campaignLink ? [{ entityType: "entity_link", entityId: campaignLink }] : [],
+              updated: []
+            }
           }
         );
       })

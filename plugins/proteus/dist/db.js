@@ -266,6 +266,14 @@ class ProteusDb {
     }
     addEntityLink(input) {
         const target = requireTarget(this);
+        const existing = this.db
+            .prepare(`SELECT id FROM entity_links
+         WHERE target_id = ? AND from_type = ? AND from_id = ?
+           AND to_type = ? AND to_id = ? AND relation = ?
+         LIMIT 1`)
+            .get(target.id, input.fromType, input.fromId, input.toType, input.toId, input.relation);
+        if (existing)
+            return Number(existing.id);
         const now = nowIso();
         const result = this.db
             .prepare(`INSERT INTO entity_links
@@ -276,6 +284,31 @@ class ProteusDb {
         const id = Number(result.lastInsertRowid);
         this.indexFts("entity_link", id, `${input.fromType}#${input.fromId}\n${input.relation}\n${input.toType}#${input.toId}\n${input.note ?? ""}`);
         return id;
+    }
+    linkActiveCampaignTo(input) {
+        const campaigns = this.listCampaigns("active");
+        if (campaigns.length !== 1)
+            return null;
+        const campaign = campaigns[0];
+        const linkId = this.addEntityLink({
+            fromType: "campaign",
+            fromId: campaign.id,
+            toType: input.toType,
+            toId: input.toId,
+            relation: input.relation,
+            confidence: 1,
+            note: input.note ?? "Auto-linked to the single active campaign."
+        });
+        if (input.eventSummary) {
+            this.addCampaignEvent({
+                campaignId: campaign.id,
+                eventType: input.eventType ?? "entity_linked",
+                entityType: input.toType,
+                entityId: input.toId,
+                summary: input.eventSummary
+            });
+        }
+        return { campaignId: campaign.id, linkId };
     }
     listEntityLinks(input = {}) {
         const rows = this.db

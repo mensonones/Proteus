@@ -336,7 +336,7 @@ try {
     "--reason",
     "Smoke candidate decision",
     "--evidence-ids",
-    "1"
+    "2"
   ]);
   run([
     "record",
@@ -352,11 +352,23 @@ try {
     "--summary",
     "Smoke gate passed",
     "--evidence-ids",
-    "1"
+    "2"
   ]);
   const gates = run(["list", "gates", "--entity-type", "hypothesis", "--entity-id", "1"]);
   if (!gates.includes("G2 realistic external attacker input") || !gates.includes("[pass]")) {
     throw new Error("list gates did not return recorded validation gate");
+  }
+  const campaignAutoLinks = run(["list", "links", "--entity-type", "campaign", "--entity-id", "1"]);
+  for (const expectedLink of [
+    "campaign#1 -[tracks_hypothesis]-> hypothesis#1",
+    "campaign#1 -[has_evidence]-> evidence#2",
+    "campaign#1 -[has_decision]-> decision#1",
+    "campaign#1 -[has_validation_gate]-> gate#1",
+    "campaign#1 -[has_agent_output]-> agent_output#1"
+  ]) {
+    if (!campaignAutoLinks.includes(expectedLink)) {
+      throw new Error(`campaign active-state auto-link missing: ${expectedLink}`);
+    }
   }
   const gateRecord = run(["show", "gate", "1"]);
   if (!gateRecord.includes('"entityType": "gate"') || !gateRecord.includes("Smoke gate passed")) {

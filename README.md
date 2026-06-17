@@ -176,6 +176,11 @@ proteus campaign checkpoint --root C:\path\to\target --id 1 --confirmed "auth bo
 proteus link --root C:\path\to\target --from-type campaign --from-id 1 --relation has_round --to-type round --to-id 1
 ```
 
+When exactly one campaign is active, Proteus automatically links new hypotheses,
+evidence, decisions, validation gates, and agent outputs back to that campaign.
+If there are zero or multiple active campaigns, MCP advisories ask the agent to
+create, resume, or choose campaign state explicitly.
+
 `plan-round` is a structured recorder and scaffold, not an autonomous target
 selection oracle. For serious targets, pass coordinator-supplied surfaces and
 fronts through `--plan-json` or the MCP `proteus_plan_round` structured fields.

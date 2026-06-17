@@ -602,11 +602,12 @@ const tools: ToolDefinition[] = [
           revisitCondition: maybeStr(input.revisitCondition) ?? ""
         };
         const id = db.addHypothesis(hypothesis);
+        const campaignLink = linkRecordToActiveCampaign(db, "hypothesis", id, "tracks_hypothesis", `Hypothesis H${id} recorded in active campaign.`);
         const similar = db
           .search(`${hypothesis.title} ${hypothesis.primitive} ${hypothesis.attackerBoundary} ${hypothesis.impactClaim}`, 8)
           .filter((row) => !(row.entityType === "hypothesis" && row.entityId === id))
           .slice(0, 5);
-        const advisories = similar.length > 0
+        const similarityAdvisories = similar.length > 0
           ? [
               {
                 severity: "warn" as const,
@@ -616,7 +617,8 @@ const tools: ToolDefinition[] = [
                 reason: "matched current hypothesis title, primitive, attacker boundary, or impact terms"
               }
             ]
-          : activeCampaignAdvisories(db);
+          : [];
+        const advisories = [...similarityAdvisories, ...campaignLinkAdvisories(db, campaignLink)];
         return toolEnvelope(
           { entityType: "hypothesis", entityId: id },
           {
@@ -627,7 +629,7 @@ const tools: ToolDefinition[] = [
               entityType: row.entityType,
               entityId: row.entityId
             })),
-            stateDelta: { created: [{ entityType: "hypothesis", entityId: id }], linked: [], updated: [] }
+            stateDelta: { created: [{ entityType: "hypothesis", entityId: id }], linked: campaignLink ? [campaignLink] : [], updated: [] }
           }
         );
       })
@@ -648,16 +650,23 @@ const tools: ToolDefinition[] = [
       ["root", "title"]
     ),
     handler: (input) =>
-      withDb(str(input.root), (db) => ({
-        ok: true,
-        id: db.addEvidence({
+      withDb(str(input.root), (db) => {
+        const id = db.addEvidence({
           title: str(input.title),
           kind: maybeStr(input.kind) ?? "note",
           body: maybeStr(input.body) ?? "",
           pathOrUrl: maybeStr(input.pathOrUrl),
           command: maybeStr(input.command)
-        })
-      }))
+        });
+        const campaignLink = linkRecordToActiveCampaign(db, "evidence", id, "has_evidence", `Evidence E${id} recorded in active campaign.`);
+        return toolEnvelope(
+          { entityType: "evidence", entityId: id },
+          {
+            advisories: campaignLinkAdvisories(db, campaignLink),
+            stateDelta: { created: [{ entityType: "evidence", entityId: id }], linked: campaignLink ? [campaignLink] : [], updated: [] }
+          }
+        );
+      })
   },
   {
     name: "proteus_record_decision",
@@ -686,11 +695,12 @@ const tools: ToolDefinition[] = [
           evidenceIds,
           actor: maybeStr(input.actor) ?? "coordinator"
         });
+        const campaignLink = linkRecordToActiveCampaign(db, "decision", id, "has_decision", `Decision D${id} recorded in active campaign.`);
         const decision = str(input.decision).toLowerCase();
         const isHighImpactDecision = ["promote", "promoted", "report", "reportable", "candidate", "kill", "killed", "discard", "discarded"].some((term) =>
           decision.includes(term)
         );
-        const advisories: Advisory[] = [];
+        const advisories: Advisory[] = campaignLinkAdvisories(db, campaignLink);
         if (isHighImpactDecision && evidenceIds.length === 0) {
           advisories.push({
             severity: "warn",
@@ -702,7 +712,7 @@ const tools: ToolDefinition[] = [
         }
         return toolEnvelope(
           { entityType: "decision", entityId: id },
-          { advisories, stateDelta: { created: [{ entityType: "decision", entityId: id }], linked: [], updated: [] } }
+          { advisories, stateDelta: { created: [{ entityType: "decision", entityId: id }], linked: campaignLink ? [campaignLink] : [], updated: [] } }
         );
       })
   },
@@ -724,9 +734,8 @@ const tools: ToolDefinition[] = [
       ["root", "entityType", "entityId", "gate"]
     ),
     handler: (input) =>
-      withDb(str(input.root), (db) => ({
-        ok: true,
-        id: db.addValidationGate({
+      withDb(str(input.root), (db) => {
+        const id = db.addValidationGate({
           entityType: str(input.entityType),
           entityId: num(input.entityId, 0),
           gate: str(input.gate),
@@ -734,8 +743,16 @@ const tools: ToolDefinition[] = [
           summary: maybeStr(input.summary) ?? "",
           evidenceIds: numberArray(input.evidenceIds),
           actor: maybeStr(input.actor) ?? "coordinator"
-        })
-      }))
+        });
+        const campaignLink = linkRecordToActiveCampaign(db, "gate", id, "has_validation_gate", `Validation gate G${id} recorded in active campaign.`);
+        return toolEnvelope(
+          { entityType: "gate", entityId: id },
+          {
+            advisories: campaignLinkAdvisories(db, campaignLink),
+            stateDelta: { created: [{ entityType: "gate", entityId: id }], linked: campaignLink ? [campaignLink] : [], updated: [] }
+          }
+        );
+      })
   },
   {
     name: "proteus_record_agent_output",
@@ -759,9 +776,8 @@ const tools: ToolDefinition[] = [
       ["root", "roundId", "codename", "roleFamily", "assignedSurface"]
     ),
     handler: (input) =>
-      withDb(str(input.root), (db) => ({
-        ok: true,
-        id: db.addAgentOutput({
+      withDb(str(input.root), (db) => {
+        const id = db.addAgentOutput({
           roundId: num(input.roundId, 0),
           codename: str(input.codename),
           roleFamily: str(input.roleFamily),
@@ -773,8 +789,16 @@ const tools: ToolDefinition[] = [
           probes: stringArray(input.probes),
           uncoveredAreas: stringArray(input.uncoveredAreas),
           validationStatus: maybeStr(input.validationStatus) ?? "unvalidated"
-        })
-      }))
+        });
+        const campaignLink = linkRecordToActiveCampaign(db, "agent_output", id, "has_agent_output", `Agent output A${id} recorded in active campaign.`);
+        return toolEnvelope(
+          { entityType: "agent_output", entityId: id },
+          {
+            advisories: campaignLinkAdvisories(db, campaignLink),
+            stateDelta: { created: [{ entityType: "agent_output", entityId: id }], linked: campaignLink ? [campaignLink] : [], updated: [] }
+          }
+        );
+      })
   },
   {
     name: "proteus_update_surface",
@@ -1045,6 +1069,48 @@ function toolEnvelope(
       updated: extras.stateDelta?.updated ?? []
     }
   };
+}
+
+function linkRecordToActiveCampaign(
+  db: ProteusDb,
+  entityType: string,
+  entityId: number,
+  relation: string,
+  eventSummary: string
+): JsonObject | null {
+  const link = db.linkActiveCampaignTo({
+    toType: entityType,
+    toId: entityId,
+    relation,
+    eventType: "record_auto_linked",
+    eventSummary
+  });
+  if (!link) return null;
+  return {
+    entityType: "entity_link",
+    entityId: link.linkId,
+    fromType: "campaign",
+    fromId: link.campaignId,
+    relation,
+    toType: entityType,
+    toId: entityId
+  };
+}
+
+function campaignLinkAdvisories(db: ProteusDb, link: JsonObject | null): Advisory[] {
+  if (!link) return activeCampaignAdvisories(db);
+  return [
+    {
+      severity: "info",
+      code: "active_campaign_linked",
+      message: "Record auto-linked to the single active campaign.",
+      links: [
+        { entityType: "campaign", entityId: Number(link.fromId) },
+        { entityType: String(link.toType), entityId: Number(link.toId) }
+      ],
+      reason: "campaign links improve resume, checkpoint, and recent-learning recovery"
+    }
+  ];
 }
 
 function activeCampaignAdvisories(db: ProteusDb): Advisory[] {

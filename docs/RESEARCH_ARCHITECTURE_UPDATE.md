@@ -197,7 +197,7 @@ After every 3-5 meaningful steps, or at the end of a round/front, require a chec
 }
 ```
 
-Checkpoints should update campaign state and compress recent learnings.
+Checkpoints should update campaign state and compress recent learnings. The implemented storage keeps checkpoints as first-class records in `campaign_checkpoints` and includes recent checkpoints in `campaignDigest`, so future agents can recover confirmed/killed/open state without reading the whole timeline.
 
 ## Campaigns
 
@@ -226,8 +226,9 @@ Core operations:
 - `proteus_campaign_resume`
 - `proteus_campaign_checkpoint`
 - `proteus_campaign_close`
-- `proteus_campaign_link_entity`
-- `proteus_campaign_digest`
+- `proteus_record_branch`
+- `proteus_link_entities`
+- CLI `proteus campaign resume` as the campaign digest/read model
 
 ## Entity Links
 
@@ -254,6 +255,11 @@ Example relations:
 
 ```text
 campaign#2 has_round round#9
+campaign#2 tracks_hypothesis hypothesis#12
+campaign#2 has_evidence evidence#31
+campaign#2 has_decision decision#7
+campaign#2 has_validation_gate gate#4
+campaign#2 has_agent_output agent_output#5
 round#9 selected_surface surface#4
 hypothesis#12 belongs_to_branch branch#3
 hypothesis#12 supported_by evidence#31
@@ -310,7 +316,7 @@ Suggested shape:
 }
 ```
 
-Advisories should help the agent recover context in real time without flooding the response.
+Advisories should help the agent recover context in real time without flooding the response. Record tools that run while exactly one campaign is active should also emit `active_campaign_linked` and include the created entity link in `stateDelta.linked`.
 
 ## Advisory Triggers
 
@@ -319,9 +325,9 @@ Implement gradually:
 - On campaign create: warn if another active or similar campaign exists.
 - On round plan: warn if active rounds already exist in the campaign or target.
 - On hypothesis record: show similar hypotheses, findings, reports, decisions, agent outputs, and killed branches.
-- On evidence record: suggest active hypothesis or campaign links.
+- On evidence record: auto-link to the single active campaign or warn when campaign state is missing/ambiguous.
 - On decision record: warn if no evidence ids are attached to a promotion or kill decision.
-- On agent output record: warn if it reopens killed or duplicate-adjacent work.
+- On gate and agent-output record: auto-link to the single active campaign or warn when campaign state is missing/ambiguous.
 - On checkpoint: update campaign digest and surface unresolved blockers.
 
 ## Similarity and Dedupe
@@ -356,9 +362,9 @@ The migration system should:
 
 Suggested migration versions:
 
+- `2026-05-17-validation-gates-surfaces-and-focused-duplicates`
 - `2026-06-17-campaigns-links-branches`
-- `2026-06-17-mcp-advisory-envelope`
-- `2026-06-17-contract-signatures`
+- `2026-06-17-campaign-checkpoints`
 
 ## CI and Release Automation
 
@@ -372,21 +378,21 @@ Add GitHub Actions workflow to:
 
 ## Acceptance Criteria
 
-- [ ] Add or refactor skill contracts into modular, professional research phases.
-- [ ] Add shared base research contract.
-- [ ] Add contract signature/attestation requirement to specialist outputs and checkpoints.
-- [ ] Add Cicada as a normal Proteus role contract for exploit-development/bypass/chaining.
-- [ ] Add hypothesis tree/branching data model or structured artifacts.
-- [ ] Add campaigns above rounds.
-- [ ] Add entity links and campaign events.
-- [ ] Add campaign resume/digest/checkpoint tooling.
-- [ ] Add MCP advisory response envelope.
-- [ ] Add similarity warnings on key record tools.
-- [ ] Add robust migration system for existing `.vros/memory.sqlite` databases.
-- [ ] Add migration tests/fixtures.
-- [ ] Add CI workflow and tag `v*` release workflow.
-- [ ] Update docs to explain plugin vs CLI vs MCP runtime responsibilities.
-- [ ] Keep Chimera/Claude integration deferred to a later issue.
+- [x] Add or refactor skill contracts into modular, professional research phases.
+- [x] Add shared base research contract.
+- [x] Add contract signature/attestation requirement to specialist outputs and checkpoints.
+- [x] Add Cicada as a normal Proteus role contract for exploit-development/bypass/chaining.
+- [x] Add hypothesis tree/branching data model or structured artifacts.
+- [x] Add campaigns above rounds.
+- [x] Add entity links and campaign events.
+- [x] Add campaign resume/digest/checkpoint tooling.
+- [x] Add MCP advisory response envelope.
+- [x] Add similarity warnings on key record tools.
+- [x] Add robust migration system for existing `.vros/memory.sqlite` databases.
+- [x] Add migration tests/fixtures.
+- [x] Add CI workflow and tag `v*` release workflow.
+- [x] Update docs to explain plugin vs CLI vs MCP runtime responsibilities.
+- [x] Keep Chimera/Claude integration deferred to a later issue.
 
 ## Recommended Implementation Order
 
@@ -398,4 +404,3 @@ Add GitHub Actions workflow to:
 6. Refactor skills/contracts and add Cicada.
 7. Add CI/release workflow.
 8. Update README/docs.
-

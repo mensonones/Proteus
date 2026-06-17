@@ -388,6 +388,7 @@ function cmdRecord(db, subcommand, parsed) {
             revisitCondition: getString(parsed, "revisit") ?? ""
         };
         const id = db.addHypothesis(input);
+        autoLinkActiveCampaign(db, "hypothesis", id, "tracks_hypothesis", `Hypothesis H${id} recorded in active campaign.`);
         console.log(`Recorded hypothesis H${id}`);
         return;
     }
@@ -399,6 +400,7 @@ function cmdRecord(db, subcommand, parsed) {
             pathOrUrl: getString(parsed, "path"),
             command: getString(parsed, "command")
         });
+        autoLinkActiveCampaign(db, "evidence", id, "has_evidence", `Evidence E${id} recorded in active campaign.`);
         console.log(`Recorded evidence E${id}`);
         return;
     }
@@ -411,6 +413,7 @@ function cmdRecord(db, subcommand, parsed) {
             evidenceIds: splitList(getString(parsed, "evidence-ids") ?? "").map((item) => Number(item)).filter(Boolean),
             actor: getString(parsed, "actor") ?? "coordinator"
         });
+        autoLinkActiveCampaign(db, "decision", id, "has_decision", `Decision D${id} recorded in active campaign.`);
         console.log(`Recorded decision D${id}`);
         return;
     }
@@ -424,6 +427,7 @@ function cmdRecord(db, subcommand, parsed) {
             evidenceIds: splitList(getString(parsed, "evidence-ids") ?? "").map((item) => Number(item)).filter(Boolean),
             actor: getString(parsed, "actor") ?? "coordinator"
         });
+        autoLinkActiveCampaign(db, "gate", id, "has_validation_gate", `Validation gate G${id} recorded in active campaign.`);
         console.log(`Recorded gate G${id}`);
         return;
     }
@@ -444,6 +448,7 @@ function cmdRecord(db, subcommand, parsed) {
             uncoveredAreas: splitList(getString(parsed, "uncovered") ?? ""),
             validationStatus: getString(parsed, "validation-status") ?? "unvalidated"
         });
+        autoLinkActiveCampaign(db, "agent_output", id, "has_agent_output", `Agent output A${id} recorded in active campaign.`);
         console.log(`Recorded agent output A${id}`);
         return;
     }
@@ -838,6 +843,15 @@ function requiredNumber(parsed, key) {
 }
 function getBoolean(parsed, key) {
     return parsed.flags[key] === true || parsed.flags[key] === "true";
+}
+function autoLinkActiveCampaign(db, entityType, entityId, relation, eventSummary) {
+    db.linkActiveCampaignTo({
+        toType: entityType,
+        toId: entityId,
+        relation,
+        eventType: "record_auto_linked",
+        eventSummary
+    });
 }
 function splitList(value) {
     return value

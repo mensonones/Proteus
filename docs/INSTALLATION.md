@@ -1,10 +1,11 @@
 # Proteus Installation
 
-Proteus has three install surfaces:
+Proteus has four install surfaces:
 
 - CLI/runtime: the `proteus` and `proteus-mcp` commands.
 - Codex plugin: installed through a Codex plugin marketplace.
 - Claude Code plugin: `/proteus`, plugin subagents, and MCP config.
+- Opencode integration: `/proteus` command, skills, subagents, and MCP config.
 
 Install the CLI first. The plugin instructions can load without it, but target
 memory, exports, labs, and MCP tools depend on the `proteus` and `proteus-mcp`
@@ -123,6 +124,66 @@ Then register the MCP server from the CLI install:
 claude mcp add -s user proteus -- proteus-mcp
 ```
 
+## 4. Opencode Integration
+
+The `opencode.json` at the project root configures Proteus for Opencode with
+the `/proteus` command, skills from `.opencode/skills/`, subagents from
+`.opencode/agents/`, support templates from `.opencode/templates/`, and the MCP
+server.
+
+Two options:
+
+### Local (per-project)
+
+Copy into your Opencode workspace:
+
+```powershell
+cp /path/to/Proteus/opencode.json opencode.json
+cp -r /path/to/Proteus/.opencode .
+```
+
+Or if Proteus is already in the workspace (e.g. cloned as a subdirectory),
+Opencode picks up the `opencode.json`, skills, agents, and templates
+automatically.
+
+### Global (all projects)
+
+Copy skills, agents, and templates to the global Opencode config directory:
+
+```powershell
+cp -r /path/to/Proteus/.opencode/skills ~/.config/opencode/skills
+cp -r /path/to/Proteus/.opencode/agents ~/.config/opencode/agents
+cp -r /path/to/Proteus/.opencode/templates ~/.config/opencode/templates
+```
+
+Add the `/proteus` command and MCP server to `~/.config/opencode/opencode.json`:
+
+```json
+{
+  "skills": { "paths": ["~/.config/opencode/skills"] },
+  "command": {
+    "proteus": {
+      "description": "Inicia pesquisa contínua de vulnerabilidades com memória estruturada.",
+      "template": "Atue como coordenador Proteus..."
+    }
+  },
+  "mcp": {
+    "proteus": {
+      "type": "local",
+      "command": ["proteus-mcp"],
+      "enabled": true
+    }
+  }
+}
+```
+
+Restart Opencode after making config changes.
+
+In Opencode, invoke Proteus with `/proteus`. Opencode loads the coordinator
+template from the command definition, the skills from `.opencode/skills/`, the
+subagent contracts from `.opencode/agents/`, and support templates from
+`.opencode/templates/`.
+
 ## Verify Runtime
 
 ```powershell
@@ -138,7 +199,8 @@ proteus-mcp
 ```
 
 For Codex, use `codex mcp add proteus -- proteus-mcp`. For Claude Code, use
-`claude mcp add -s user proteus -- proteus-mcp`. Plugin hosts that support
+`claude mcp add -s user proteus -- proteus-mcp`. For Opencode, the MCP server
+is declared in `opencode.json`. Plugin hosts that support
 plugin-declared MCP servers can also use `plugins/proteus/.mcp.json`. The
 wrapper builds the runtime if `dist/` is not present yet.
 

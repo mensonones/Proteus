@@ -25,8 +25,8 @@ flowchart TD
 ```
 
 The assistant integration layer provides the agent instructions and interaction
-surface for Codex, Claude Code, and MCP-capable hosts. The coordinator runtime
-turns the research framework into a repeatable process. The
+surface for Codex, Claude Code, Opencode, and MCP-capable hosts. The coordinator
+runtime turns the research framework into a repeatable process. The
 memory store preserves learned state. The tool layer instruments the target
 environment. The lab layer validates candidates. Exports turn structured state
 into readable Markdown and reports.
@@ -47,10 +47,16 @@ Implementation:
 
 - Codex plugin manifest and skill;
 - Claude Code plugin manifest, slash command, subagents, and MCP config;
+- Opencode `opencode.json` config, `/proteus` command, skills, subagents, support templates, and MCP config under `.opencode/`;
 - `SKILL.md`;
 - Markdown templates;
 - PowerShell and POSIX wrappers under `plugins/proteus/scripts`;
 - MCP configuration under `plugins/proteus/.mcp.json`.
+
+`plugins/proteus/` is the canonical source for role contracts, skills, and
+templates. The root `.opencode/` tree is regenerated from it with
+`npm run sync:opencode`, applying only OpenCode-specific naming and resolution
+adapters.
 
 ### Coordinator Runtime
 
@@ -135,6 +141,7 @@ Libris: docs/contract verification.
 Mimic: runtime/adapter/environment divergence.
 Artificer: PoC/lab construction.
 Skeptic: adversarial review and refutation.
+Cicada: exploit development, bypass, chaining, reliability, and impact proof.
 ```
 
 Memory records should store both the codename and the role family so exports are
@@ -339,7 +346,7 @@ The assistant integration should instruct the agent to:
 - use goal or campaign mechanisms for user-requested continuous campaigns or
   persistent objectives when the capability is available;
 - use available subagents for parallel, independent Proteus fronts when the
-  session allows delegation;
+  session allows delegation (Opencode, Codex, or Claude Code);
 - initialize or load target memory;
 - inspect existing findings/reports before new work;
 - create a round plan before delegating;
@@ -350,8 +357,9 @@ The assistant integration should instruct the agent to:
 - preserve discarded paths and playbook material;
 - stop on report-grade candidates, exhaustion, blockers, or user interruption.
 
-The coordinator remains the authority for strategy and evidence quality. Codex
-subagents may explore bounded fronts, but they do not promote findings directly.
+The coordinator remains the authority for strategy and evidence quality. Codex,
+Opencode, or Claude Code subagents may explore bounded fronts, but they do not
+promote findings directly.
 Goal mode may keep a campaign alive across long work, but stop conditions,
 replan triggers, and validation gates still come from Proteus memory.
 

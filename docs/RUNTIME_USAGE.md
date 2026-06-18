@@ -27,14 +27,20 @@ one specific skill.
 
 In Claude Code, use the plugin command `/proteus`.
 
+In Opencode, use `/proteus`. Opencode loads the coordinator template, skills
+from `.opencode/skills/`, subagent contracts from `.opencode/agents/`, and
+support templates from `.opencode/templates/`. Make sure the MCP server is
+configured in `opencode.json`.
+
 Proteus is designed to benefit from host-assistant orchestration features when
 they are available in the session:
 
 - Use goal or campaign mode for user-requested continuous campaigns,
   long-running work, or research objectives that should persist until explicit
-  stop conditions are met.
+  stop conditions are met (available in Claude Code and Opencode).
 - Use subagents for independent, bounded Proteus fronts when delegation is
-  available and allowed. Assign one codename and one surface per subagent:
+  available and allowed (Opencode, Codex, or Claude Code). Assign one codename
+  and one surface per subagent:
   Argus, Loom, Chaos, Libris, Mimic, Artificer, Skeptic, or Cicada.
 - Keep the coordinator in charge of ROI selection, memory updates, validation
   gates, duplicate checks, kill/promote decisions, and replanning.
@@ -328,6 +334,8 @@ Claude Code uses the project-level MCP configuration at:
 ```text
 .mcp.json
 ```
+
+Opencode uses the MCP configuration declared in `opencode.json`.
 
 ## Anti-Revisit Updates
 

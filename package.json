@@ -1,17 +1,31 @@
 {
   "name": "@rafabd1/proteus",
   "version": "1.0.1",
-  "description": "A plugin for Claude Code and Codex that coordinates structured, continuous vulnerability research against arbitrary codebases.",
+  "description": "A plugin for Claude Code, Codex, and OpenCode that coordinates structured, continuous vulnerability research against arbitrary codebases.",
   "type": "commonjs",
   "bin": {
     "proteus": "./dist/cli.js",
     "proteus-mcp": "./dist/mcp.js"
   },
+  "files": [
+    ".agents/",
+    ".claude-plugin/",
+    ".opencode/",
+    "CHANGELOG.md",
+    "dist/",
+    "docs/",
+    "opencode.json",
+    "plugins/",
+    "scripts/",
+    "src/",
+    "tsconfig.json"
+  ],
   "scripts": {
-    "build": "tsc -p tsconfig.json && node scripts/sync-plugin-dist.mjs",
+    "build": "tsc -p tsconfig.json && node scripts/sync-plugin-dist.mjs && node scripts/sync-opencode.mjs",
     "check": "tsc -p tsconfig.json --noEmit",
     "changelog": "node scripts/generate-changelog.mjs",
     "start": "node dist/cli.js",
+    "sync:opencode": "node scripts/sync-opencode.mjs",
     "release:validate": "npm test && node scripts/release-validation.mjs",
     "smoke": "npm run build && node scripts/smoke-test.mjs && node scripts/mcp-smoke-test.mjs",
     "test": "npm run check && npm run smoke"
@@ -22,7 +36,8 @@
     "bug-bounty",
     "offensive-security",
     "codex-plugin",
-    "claude-code"
+    "claude-code",
+    "opencode"
   ],
   "license": "GPL-3.0-or-later",
   "dependencies": {},

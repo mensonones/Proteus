@@ -22,6 +22,12 @@ node_modules/
 .pnpm-store/
 .yarn/
 
+.opencode/.gitignore
+.opencode/node_modules/
+.opencode/package.json
+.opencode/package-lock.json
+.opencode/bun.lock
+
 dist/
 !dist/
 !dist/**

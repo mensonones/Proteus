@@ -1,7 +1,7 @@
 # Proteus
 
-Proteus is a plugin for Claude Code and Codex, plus a local runtime, for
-structured, continuous vulnerability research against arbitrary codebases.
+Proteus is a plugin for Claude Code, Codex, and Opencode, plus a local runtime,
+for structured, continuous vulnerability research against arbitrary codebases.
 
 You give it a target repository. Proteus helps the coordinator map the codebase,
 select high-ROI security surfaces, generate non-obvious exploitability
@@ -32,7 +32,7 @@ negative controls, and PoC validation without artificial lab help.
   expected behavior, public-known issues, forced-vulnerable configs, and
   lab-created bugs.
 - CLI and MCP interfaces, so the same memory and planning operations work from
-  the terminal, Codex, Claude Code, or other MCP-capable assistants.
+  the terminal, Codex, Claude Code, Opencode, or other MCP-capable assistants.
 - Realistic PoC lab scaffolding with attacker model, documented/default config,
   negative controls, limitations, and evidence capture.
 - Triage-ready report draft guidance that follows user/program templates,
@@ -41,12 +41,13 @@ negative controls, and PoC validation without artificial lab help.
 
 ## Install
 
-Proteus has three install surfaces:
+Proteus has four install surfaces:
 
 - CLI/runtime: `proteus` and `proteus-mcp`
 - Codex plugin: the main `continuous-vuln-research` coordinator skill,
   specialist skills, and MCP configuration
 - Claude Code plugin: `/proteus`, plugin subagents, and plugin MCP configuration
+- Opencode integration: `/proteus` command, skills, subagents, and MCP configuration
 
 Install the CLI first. The plugin instructions and skills can load without it,
 but target memory, exports, labs, and MCP tools depend on the `proteus` and
@@ -102,6 +103,45 @@ Then register the MCP server from the CLI install:
 claude mcp add -s user proteus -- proteus-mcp
 ```
 
+### 4. Add The Opencode Integration
+
+Two options:
+
+**Local (per-project):** Copy the config into your Opencode workspace:
+
+```powershell
+cp /path/to/Proteus/opencode.json opencode.json
+cp -r /path/to/Proteus/.opencode .
+```
+
+Or if Proteus is already in the workspace (e.g. cloned as a subdirectory), Opencode
+picks up the `opencode.json`, skills, agents, and templates from the project root
+automatically.
+
+**Global (all projects):** Copy skills, agents, and templates to
+`~/.config/opencode/` and add the `/proteus` command and MCP server to the
+global config:
+
+```powershell
+cp -r /path/to/Proteus/.opencode/skills ~/.config/opencode/skills
+cp -r /path/to/Proteus/.opencode/agents ~/.config/opencode/agents
+cp -r /path/to/Proteus/.opencode/templates ~/.config/opencode/templates
+```
+
+Then add to `~/.config/opencode/opencode.json`:
+
+```json
+{
+  "skills": { "paths": ["~/.config/opencode/skills"] },
+  "command": { "proteus": { "description": "...", "template": "..." } },
+  "mcp": { "proteus": { "type": "local", "command": ["proteus-mcp"], "enabled": true } }
+}
+```
+
+Make sure the MCP server is configured pointing to the `proteus-mcp` runtime.
+
+In Opencode, invoke Proteus with `/proteus`.
+
 ## Quick Start
 
 After installing the plugin in Codex, invoke Proteus with `@proteus`. This loads
@@ -111,6 +151,10 @@ mention in Codex for normal Proteus work; slash syntax is better reserved for
 direct skill references when you explicitly want one specific skill.
 
 In Claude Code, use the plugin slash command `/proteus`.
+
+In Opencode, use `/proteus`. Opencode loads the coordinator template, skills,
+subagent contracts, and support templates from the configured `.opencode/`
+directory.
 
 Example prompts:
 
@@ -299,6 +343,7 @@ efficiency:
 | Mimic | Runtime, adapter, deployment-profile, and environment divergence. |
 | Artificer | Realistic PoC labs and didactic validation artifacts. |
 | Skeptic | Adversarial review, refutation, downgrade, and anti-slop pressure. |
+| Cicada | Exploit development, bypass construction, chaining, reliability, and impact proof. |
 
 Artificer starts only after initial gates pass. Skeptic starts only after there
 is technical evidence worth challenging. No candidate should become report-grade
@@ -404,6 +449,8 @@ Claude Code can use the same runtime through a user-scoped MCP registration:
 claude mcp add -s user proteus -- proteus-mcp
 ```
 
+Opencode uses the MCP server declared in `opencode.json` (see install section above).
+
 Plugin hosts that support plugin-declared MCP servers can also start it through:
 
 ```text
@@ -467,6 +514,7 @@ proteus-mcp
 Assistant integration
   - operational contract for continuous vulnerability research
   - defines coordinator loop, validation gates, role usage, and output verdicts
+  - packaged for Claude Code, Codex, and Opencode
 
 CLI runtime
   - initializes target memory
@@ -500,6 +548,18 @@ docs/
   RUNTIME_USAGE.md
 .claude-plugin/
   marketplace.json
+.opencode/
+  agents/proteus-*.md
+  skills/proteus/SKILL.md
+  skills/proteus-chaining/SKILL.md
+  skills/proteus-checkpoint/SKILL.md
+  skills/proteus-codebase-research/SKILL.md
+  skills/proteus-fuzzing/SKILL.md
+  skills/proteus-poc-exploit/SKILL.md
+  skills/proteus-web-intel/SKILL.md
+  skills/proteus-web-research/SKILL.md
+  templates/*.md
+  templates/round-input.json
 plugins/
   proteus/
     .claude-plugin/plugin.json
@@ -522,6 +582,10 @@ src/
   planner.ts
   roles.ts
 ```
+
+The root `.opencode/` integration is generated from `plugins/proteus/` by
+`npm run sync:opencode`. Edit the canonical role contracts, skills, and
+templates under `plugins/proteus/`, then regenerate the OpenCode files.
 
 ## Dev Install
 

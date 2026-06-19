@@ -12,6 +12,7 @@ const skillMap = [
   ["checkpoint", "proteus-checkpoint"],
   ["codebase-research", "proteus-codebase-research"],
   ["fuzzing", "proteus-fuzzing"],
+  ["maintainability-review", "maintainability-review"],
   ["poc-exploit", "proteus-poc-exploit"],
   ["web-intel", "proteus-web-intel"],
   ["web-research", "proteus-web-research"]

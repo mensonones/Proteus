@@ -24,6 +24,7 @@
     "build": "tsc -p tsconfig.json && node scripts/sync-plugin-dist.mjs && node scripts/sync-opencode.mjs",
     "check": "tsc -p tsconfig.json --noEmit",
     "changelog": "node scripts/generate-changelog.mjs",
+    "install:maintainability-review": "node scripts/install-maintainability-review-skill.mjs",
     "start": "node dist/cli.js",
     "sync:opencode": "node scripts/sync-opencode.mjs",
     "release:validate": "npm test && node scripts/release-validation.mjs",

@@ -142,6 +142,16 @@ Make sure the MCP server is configured pointing to the `proteus-mcp` runtime.
 
 In Opencode, invoke Proteus with `/proteus`.
 
+### Standalone Maintainability Review Skill
+
+This repo also carries a standalone `maintainability-review` skill. After
+cloning Proteus on a new machine, install it globally for Codex, Claude Code,
+and Opencode with:
+
+```powershell
+npm run install:maintainability-review
+```
+
 ## Quick Start
 
 After installing the plugin in Codex, invoke Proteus with `@proteus`. This loads

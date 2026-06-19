@@ -63,6 +63,17 @@ npm link
 proteus --version
 ```
 
+To install the standalone maintainability review skill globally for Codex,
+Claude Code, and Opencode from this clone:
+
+```powershell
+npm run install:maintainability-review
+```
+
+The installer creates symlinks from the versioned skill at
+`plugins/proteus/skills/maintainability-review` into the user-level skill
+directories used by those tools.
+
 ## 2. Codex Plugin Install
 
 Codex supports marketplace sources in the form `owner/repo[@ref]`, Git URLs,

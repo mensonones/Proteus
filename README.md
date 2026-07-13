@@ -26,6 +26,9 @@ negative controls, and PoC validation without artificial lab help.
   areas.
 - Named specialist fronts for repeatable multi-agent research: Argus, Loom,
   Chaos, Libris, Mimic, Artificer, Skeptic, and Cicada.
+- Mobile-first reversing support for Android/iOS artifacts that separates known
+  baseline coverage from non-obvious mobile-specific hypotheses and cheap
+  validation experiments.
 - Campaign-scoped state, hypothesis branches, entity links, and MCP advisories
   so agents can recover active context without searching the whole memory base.
 - Validation gates that aggressively suppress weak hypotheses, duplicates,
@@ -152,6 +155,12 @@ and Opencode with:
 npm run install:maintainability-review
 ```
 
+`maintainability-review` is a standalone skill, not a Proteus subagent role. It
+reviews the current diff or a named target for structural code quality:
+maintainability, abstraction shape, branching complexity, type boundaries, file
+growth, and architecture drift. It is separate from Argus, which is a Proteus
+security subagent for bounded component-level vulnerability research.
+
 ## Quick Start
 
 After installing the plugin in Codex, invoke Proteus with `@proteus`. This loads
@@ -166,6 +175,17 @@ In Opencode, use `/proteus`. Opencode loads the coordinator template, skills,
 subagent contracts, and support templates from the configured `.opencode/`
 directory.
 
+Proteus has both skills and role/subagent contracts. Skills are tactical
+capability packs the coordinator can load when needed. Role contracts are the
+bounded subagent personas such as Argus, Loom, Chaos, Libris, Mimic, Artificer,
+Skeptic, and Cicada. `mobile-reversing` and `maintainability-review` are skills,
+not subagent roles. `mobile-reversing` is for mobile artifact research.
+`maintainability-review` is for structural code-quality review. Argus is the
+subagent role for bounded component-level security review, not generic code
+review. For normal Proteus work, start with `@proteus` or `/proteus` and let the
+coordinator choose the right skill or role. Refer to a skill directly only when
+you intentionally want that narrow pass.
+
 Example prompts:
 
 ```text
@@ -178,6 +198,8 @@ Example prompts:
 @proteus validate this candidate with realistic PoC gates, negative controls, and no forced vulnerable config
 
 @proteus draft a triage-ready report without internal workflow references
+
+@proteus inspect this APK as mobile-only, use the mobile-reversing skill, cover the known baseline, and list exploratory hypotheses with cheap validation experiments
 ```
 
 When available, Proteus should use persistent goal/campaign features for
@@ -346,7 +368,7 @@ efficiency:
 
 | Codename | Focus |
 | --- | --- |
-| Argus | Component-level review of local primitives and covered modules. |
+| Argus | Bounded component-level security review of local primitives and covered modules. Not generic code review. |
 | Loom | Macro and chaining analysis across components and trust boundaries. |
 | Chaos | Fuzzing, edge-case generation, anomaly matrices, and probes. |
 | Libris | Docs, tests, advisories, public-known behavior, timeline, and contract verification. |
@@ -565,6 +587,7 @@ docs/
   skills/proteus-checkpoint/SKILL.md
   skills/proteus-codebase-research/SKILL.md
   skills/proteus-fuzzing/SKILL.md
+  skills/proteus-mobile-reversing/SKILL.md
   skills/proteus-poc-exploit/SKILL.md
   skills/proteus-web-intel/SKILL.md
   skills/proteus-web-research/SKILL.md
@@ -583,6 +606,7 @@ plugins/
     skills/chaining/SKILL.md
     skills/codebase-research/SKILL.md
     skills/fuzzing/SKILL.md
+    skills/mobile-reversing/SKILL.md
     skills/web-intel/SKILL.md
     skills/web-research/SKILL.md
 src/

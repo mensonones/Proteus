@@ -13,6 +13,7 @@ const skillMap = [
   ["codebase-research", "proteus-codebase-research"],
   ["fuzzing", "proteus-fuzzing"],
   ["maintainability-review", "maintainability-review"],
+  ["mobile-reversing", "proteus-mobile-reversing"],
   ["poc-exploit", "proteus-poc-exploit"],
   ["web-intel", "proteus-web-intel"],
   ["web-research", "proteus-web-research"]
@@ -47,6 +48,20 @@ function syncSkills() {
 
     fs.mkdirSync(destinationDir, { recursive: true });
     fs.writeFileSync(destinationPath, toOpenCodeSkill(fs.readFileSync(sourcePath, "utf8"), sourceName, openCodeName));
+    syncSkillResources(sourceName, path.join(pluginRoot, "skills", sourceName), destinationDir);
+  }
+}
+
+function syncSkillResources(sourceName, sourceDir, destinationDir) {
+  if (sourceName !== "mobile-reversing") {
+    return;
+  }
+
+  for (const child of ["scripts", "references"]) {
+    const sourceChild = path.join(sourceDir, child);
+    if (fs.existsSync(sourceChild)) {
+      fs.cpSync(sourceChild, path.join(destinationDir, child), { recursive: true });
+    }
   }
 }
 

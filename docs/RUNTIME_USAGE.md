@@ -32,6 +32,16 @@ from `.opencode/skills/`, subagent contracts from `.opencode/agents/`, and
 support templates from `.opencode/templates/`. Make sure the MCP server is
 configured in `opencode.json`.
 
+Proteus skills are not the same thing as Proteus subagent roles. Skills are
+loaded capability contracts, while subagent roles are bounded personas such as
+Argus, Loom, Chaos, Libris, Mimic, Artificer, Skeptic, and Cicada. The
+`mobile-reversing` skill is a mobile-only capability pack. The standalone
+`maintainability-review` skill is for structural code-quality review of a diff
+or named target. Argus is different: it is a bounded security-review subagent
+role for local primitives and vulnerability surfaces, not a generic code-review
+tool. Use the normal `@proteus` or `/proteus` entrypoint for most work, and name
+a skill directly only when you want that targeted pass.
+
 Proteus is designed to benefit from host-assistant orchestration features when
 they are available in the session:
 

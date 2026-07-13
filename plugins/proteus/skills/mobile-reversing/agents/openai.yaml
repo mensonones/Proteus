@@ -1,0 +1,4 @@
+interface:
+  display_name: "Mobile Reversing"
+  short_description: "Focus mobile APK, bundle, native, and exploratory mobile hypotheses"
+  default_prompt: "Use $mobile-reversing to inspect this mobile app artifact. Cover the known Android/iOS mobile baseline, extract index.bundle and native .so files when present, then propose non-obvious mobile-specific hypotheses with cheap validation experiments. Focus only on reachable mobile attack surface."

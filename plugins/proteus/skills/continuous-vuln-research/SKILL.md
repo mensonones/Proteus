@@ -1,6 +1,6 @@
 ---
 name: continuous-vuln-research
-description: Coordinate disciplined, continuous, professional vulnerability research with Proteus memory, campaigns, bounded delegation, validation gates, realistic exploitability, anti-slop controls, and report-grade decision discipline.
+description: Coordinate disciplined, continuous, professional vulnerability research with Proteus memory, campaigns, bounded delegation, target-context detection including Android/iOS mobile projects, validation gates, realistic exploitability, anti-slop controls, and report-grade decision discipline.
 ---
 
 # Proteus Continuous Vulnerability Research
@@ -69,6 +69,31 @@ Recover state -> Map -> Hypothesize -> Prioritize -> Delegate -> Validate -> Kil
 
 Never ask an agent to "review the repo". Assign a bounded surface or branch,
 the relevant heuristic family, expected artifact, and kill criteria.
+
+## Target Context Detection
+
+Before planning tactical work, decide whether the current target is mobile,
+web/backend, library/framework, CLI, infrastructure, or mixed. Use repository
+artifacts, supplied files, and user wording; do not assume the target type from
+the repo name alone.
+
+Treat the context as mobile when there is concrete Android or iOS evidence:
+
+- Android: `AndroidManifest.xml`, `build.gradle`, `settings.gradle`,
+  `gradle.properties`, `app/src/main`, `res/`, `assets/index.android.bundle`,
+  APK/AAB/XAPK files, DEX, JNI, `lib/*/*.so`, React Native Android files, or
+  Flutter/Capacitor/Cordova Android project files.
+- iOS: `.xcodeproj`, `.xcworkspace`, `Podfile`, `Package.swift` with iOS
+  target, `Info.plist`, `.entitlements`, `.ipa`, `.app`, Mach-O binaries,
+  Frameworks, Swift/Objective-C app delegates, React Native iOS files, or
+  Flutter/Capacitor/Cordova iOS project files.
+
+If the target is mobile-only, continue with a mobile-first plan and use
+`mobile-reversing` for tactical execution. If the target is mixed, keep the
+mobile app as the entry point and expand into backend/web only when mobile
+evidence proves that the client reaches that surface and the expansion is
+needed to validate impact. If no mobile evidence exists, do not use the mobile
+skill.
 
 ## Host Capabilities
 
@@ -146,13 +171,24 @@ Use the dedicated skills for tactical execution:
   issues, PRs, docs, tests, and affected-version timeline.
 - `web-research`: authorized web workflow mapping, blackbox/graybox probes,
   endpoint behavior, and web side-effect discovery.
+- `mobile-reversing`: Android/iOS mobile context detection, APK/AAB/IPA/app
+  artifact extraction, React Native `index.bundle` or Hermes analysis, native
+  `.so`/Mach-O triage, mobile storage/network/auth/WebView/deeplink/JNI/native
+  bridge vulnerability research, mobile toolchain planning, known-baseline
+  coverage, and non-obvious mobile-specific hypotheses with cheap validation
+  experiments.
+- `maintainability-review`: standalone structural code-quality review skill for
+  maintainability, abstraction shape, branching complexity, type boundaries,
+  file growth, and architecture drift. It is not a Proteus security subagent and
+  does not replace Argus.
 - `poc-exploit`: realistic PoC/lab design, manual blackbox reproduction,
   negative controls, reliability notes, and impact evidence.
 - `checkpoint`: compact campaign state compression after meaningful progress.
 
 Use role contracts for delegated fronts:
 
-- Argus: component-level primitive review.
+- Argus: bounded component-level security review of local primitives; not
+  generic code review.
 - Loom: macro chaining and cross-component reasoning.
 - Chaos: fuzzing and edge-case generation.
 - Libris: docs/contract/intelligence verification.

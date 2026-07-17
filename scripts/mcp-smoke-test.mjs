@@ -48,9 +48,9 @@ child.stderr.on("data", (chunk) => process.stderr.write(chunk));
 function request(method, params = {}) {
   const id = nextId++;
   const message = { jsonrpc: "2.0", id, method, params };
-  child.stdin.write(JSON.stringify(message) + "\n");
   return new Promise((resolve, reject) => {
     pending.set(id, { resolve, reject });
+    child.stdin.write(JSON.stringify(message) + "\n");
     setTimeout(() => {
       if (pending.has(id)) {
         pending.delete(id);

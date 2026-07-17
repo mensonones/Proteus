@@ -15,7 +15,10 @@ const pluginRoot = path.resolve(repoRoot, String(codexEntry.source?.path ?? code
 const codexManifest = readJson(path.join(pluginRoot, ".codex-plugin", "plugin.json"));
 assert(codexManifest.name === "proteus", "Codex plugin name must be proteus");
 assertFile(path.resolve(pluginRoot, codexManifest.skills));
-assertFile(path.resolve(pluginRoot, codexManifest.mcpServers));
+const codexMcpConfigPath = path.resolve(pluginRoot, codexManifest.mcpServers);
+assertFile(codexMcpConfigPath);
+const codexMcpConfig = readJson(codexMcpConfigPath);
+assert(codexMcpConfig.mcpServers?.proteus?.cwd === ".", "Codex plugin MCP must resolve relative paths from the plugin root");
 assertSkill(path.join(pluginRoot, "skills", "proteus", "SKILL.md"), "proteus");
 assertSkill(path.join(pluginRoot, "skills", "continuous-vuln-research", "SKILL.md"), "continuous-vuln-research");
 const roleFiles = fs.readdirSync(path.join(pluginRoot, "agents")).filter((name) => name.startsWith("proteus-") && name.endsWith(".md")).sort();

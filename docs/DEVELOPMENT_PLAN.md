@@ -120,6 +120,14 @@ The codenames are part of Proteus's operating language: they make plans,
 delegation, memory records, and exports easier to scan across long-running
 research.
 
+### Atlas: Architecture and Attack-Surface Mapping
+
+Atlas builds a read-only, evidence-backed map before broad planning when the
+target is large, unfamiliar, mixed, or materially changed. It identifies major
+components, entrypoints, trust boundaries, runtime context, recent-risk deltas,
+high-ROI surfaces, and bounded non-overlapping work splits. Atlas does not
+generate or promote vulnerability findings.
+
 ### Argus: Component-Level Review
 
 Argus is the many-eyed reviewer. It inspects components in detail and looks for

@@ -19,11 +19,10 @@ Proteus requires Node.js 24 or newer because the first runtime uses
 
 ## Assistant Orchestration
 
-In Codex, invoke Proteus with `@proteus`. Treat `@proteus` as the normal
-entrypoint because it lets the assistant load the plugin, start from the main
-coordinator skill, and pull in specialist skills only when needed. Slash-style
-skill references should be reserved for cases where the user intentionally wants
-one specific skill.
+In Codex CLI, install the plugin, start a new session, and invoke Proteus with
+`$proteus`. Use `/skills` to confirm that the entrypoint is available. The
+`@Proteus` mention belongs to supported ChatGPT desktop plugin surfaces; it is
+not a Codex CLI alias.
 
 In Claude Code, use the plugin command `/proteus`.
 
@@ -34,13 +33,16 @@ configured in `opencode.json`.
 
 Proteus skills are not the same thing as Proteus subagent roles. Skills are
 loaded capability contracts, while subagent roles are bounded personas such as
-Argus, Loom, Chaos, Libris, Mimic, Artificer, Skeptic, and Cicada. The
+Atlas, Argus, Loom, Chaos, Libris, Mimic, Artificer, Skeptic, and Cicada. Atlas
+maps large, unfamiliar, mixed, or materially changed targets before broad
+planning and does not generate findings. The
 `mobile-reversing` skill is a mobile-only capability pack. The standalone
 `maintainability-review` skill is for structural code-quality review of a diff
 or named target. Argus is different: it is a bounded security-review subagent
 role for local primitives and vulnerability surfaces, not a generic code-review
-tool. Use the normal `@proteus` or `/proteus` entrypoint for most work, and name
-a skill directly only when you want that targeted pass.
+tool. Use `$proteus` in Codex CLI or `/proteus` in Claude Code and Opencode for
+most work, and name a tactical skill directly only when you want that targeted
+pass.
 
 Proteus is designed to benefit from host-assistant orchestration features when
 they are available in the session:
@@ -51,7 +53,10 @@ they are available in the session:
 - Use subagents for independent, bounded Proteus fronts when delegation is
   available and allowed (Opencode, Codex, or Claude Code). Assign one codename
   and one surface per subagent:
-  Argus, Loom, Chaos, Libris, Mimic, Artificer, Skeptic, or Cicada.
+  Atlas, Argus, Loom, Chaos, Libris, Mimic, Artificer, Skeptic, or Cicada.
+- In Codex, run `proteus-install-codex-agents` once after installing or updating
+  the CLI runtime. This makes the nine native `proteus-*` agent types available
+  across local projects. Start a new Codex session after installation.
 - Keep the coordinator in charge of ROI selection, memory updates, validation
   gates, duplicate checks, kill/promote decisions, and replanning.
 - Fall back to serial local execution when goal mode, subagents, MCP tools, or
@@ -63,6 +68,28 @@ candidate still needs realistic attacker control, documented/default
 configuration, negative controls, dedupe, and a PoC that does not depend on
 artificial lab help. It also needs recorded public intel/timeline review and an
 evidence-backed Skeptic refutation pass.
+
+## Mobile Artifact Helpers
+
+The mobile skill includes Python 3.9+ helpers. Inspect only the profiles needed
+for the supplied artifact:
+
+```powershell
+python plugins/proteus/skills/mobile-reversing/scripts/mobile_toolchain.py --check --profiles core,android,rn,native --json --versions
+```
+
+Extract into a fresh directory outside a directory input:
+
+```powershell
+python plugins/proteus/skills/mobile-reversing/scripts/extract_mobile_artifacts.py target.apk --output mobile-run-001
+```
+
+The extractor treats archives as untrusted input, enforces file-count, expanded
+size, per-file size, compression-ratio, path, and symlink limits, handles nested
+APK files in XAPK/APKS packages, and writes `manifest.json` plus `triage.txt`.
+It uses installed decompilers and native-analysis tools when available. Use
+`--no-tools` for inventory-only operation. Never reuse a non-empty output
+directory; this prevents stale evidence from entering the current run.
 
 ## Initialize A Target
 
@@ -174,6 +201,7 @@ node dist/cli.js prompt --role argus --surface "Auth/session boundary" --objecti
 Valid roles:
 
 ```text
+atlas
 argus
 loom
 chaos
@@ -353,8 +381,8 @@ Opencode uses the MCP configuration declared in `opencode.json`.
 node dist/cli.js update surface --root C:\path\to\target --id 1 --status exhausted --revisit "Only reopen on new runtime mode or new chain dependency"
 ```
 
-Use this after a round when Argus, Loom, Chaos, Libris, Mimic, Artificer, or
-Skeptic has exhausted or downgraded a surface. The planner uses these status
+Use this after a round when Atlas, Argus, Loom, Chaos, Libris, Mimic, Artificer,
+Skeptic, or Cicada has mapped, exhausted, or downgraded a surface. The planner uses these status
 fields to avoid repeated low-ROI work.
 
 ## Agent Output Records

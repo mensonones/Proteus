@@ -5,11 +5,13 @@
   "type": "commonjs",
   "bin": {
     "proteus": "./dist/cli.js",
-    "proteus-mcp": "./dist/mcp.js"
+    "proteus-mcp": "./dist/mcp.js",
+    "proteus-install-codex-agents": "./scripts/install-codex-agents.mjs"
   },
   "files": [
     ".agents/",
     ".claude-plugin/",
+    ".codex/",
     ".opencode/",
     "CHANGELOG.md",
     "dist/",
@@ -21,15 +23,19 @@
     "tsconfig.json"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.json && node scripts/sync-plugin-dist.mjs && node scripts/sync-opencode.mjs",
+    "build": "tsc -p tsconfig.json && node scripts/sync-plugin-dist.mjs && node scripts/sync-opencode.mjs && node scripts/sync-codex-agents.mjs",
     "check": "tsc -p tsconfig.json --noEmit",
     "changelog": "node scripts/generate-changelog.mjs",
     "install:maintainability-review": "node scripts/install-maintainability-review-skill.mjs",
+    "install:codex-agents": "npm run sync:codex-agents && node scripts/install-codex-agents.mjs",
+    "test:mobile": "node scripts/mobile-test.mjs",
+    "test:surfaces": "node scripts/integration-surface-test.mjs",
     "start": "node dist/cli.js",
     "sync:opencode": "node scripts/sync-opencode.mjs",
+    "sync:codex-agents": "node scripts/sync-codex-agents.mjs",
     "release:validate": "npm test && node scripts/release-validation.mjs",
     "smoke": "npm run build && node scripts/smoke-test.mjs && node scripts/mcp-smoke-test.mjs",
-    "test": "npm run check && npm run smoke"
+    "test": "npm run check && npm run test:mobile && npm run test:surfaces && npm run smoke"
   },
   "keywords": [
     "security-research",

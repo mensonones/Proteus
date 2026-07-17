@@ -187,6 +187,8 @@ Use the dedicated skills for tactical execution:
 
 Use role contracts for delegated fronts:
 
+- Atlas: read-only architecture and attack-surface mapping before broad
+  planning; it never generates or promotes findings.
 - Argus: bounded component-level security review of local primitives; not
   generic code review.
 - Loom: macro chaining and cross-component reasoning.
@@ -198,7 +200,10 @@ Use role contracts for delegated fronts:
 - Cicada: exploit-development, bypass, reliability, and chaining for branches
   that already have concrete signal and a known blocker.
 
-Artificer starts only after initial gates have enough evidence. Skeptic starts
+Atlas starts before broad planning when a large, unfamiliar, mixed, or
+materially changed target lacks a fresh evidence-backed map. Skip Atlas for a
+bounded known target with a fresh map. Artificer starts only after initial
+gates have enough evidence. Skeptic starts
 after technical evidence exists. Cicada starts only after a branch has concrete
 signal. A candidate cannot become report-grade until the intelligence/timeline
 review and Skeptic rebuttal are recorded.
@@ -211,6 +216,7 @@ integration directory, not from arbitrary target source files.
 Role contract filenames:
 
 ```text
+proteus-atlas.md
 proteus-argus.md
 proteus-loom.md
 proteus-chaos.md
@@ -241,9 +247,15 @@ Resolve from:
 4. the host-exposed Proteus plugin root, when available
 ```
 
-For OpenCode subagents, the coordinator should read the relevant contract and
-inline the role requirements into the subagent prompt together with objective,
-surface, evidence, and kill criteria.
+For OpenCode subagents, prefer the matching native custom agent type
+`proteus-atlas`, `proteus-argus`, `proteus-loom`, `proteus-chaos`, `proteus-libris`,
+`proteus-mimic`, `proteus-artificer`, `proteus-skeptic`, or `proteus-cicada`
+when it is available. Still include the bounded objective, surface, expected
+evidence, and kill criteria in the delegated task. If the host does not expose
+that custom agent type, read the relevant Markdown contract and inline its role
+requirements into a generic subagent prompt. Record the fallback as a host
+limitation; do not abandon a useful bounded front solely because named agents
+are unavailable.
 
 ## Validation Gates
 

@@ -104,6 +104,7 @@ Acceptance criteria:
 Canonical fronts:
 
 ```text
+Atlas: architecture and attack-surface mapping.
 Argus: component-level review.
 Loom: macro/chaining analysis.
 Chaos: fuzzing and edge-case generation.
@@ -111,6 +112,7 @@ Libris: docs/contract verification.
 Mimic: runtime/adapter/environment divergence.
 Artificer: PoC/lab construction.
 Skeptic: adversarial review and refutation.
+Cicada: exploit development, bypass, chaining, reliability, and impact proof.
 ```
 
 ### R6: Hypothesis Generation

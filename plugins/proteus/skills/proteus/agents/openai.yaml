@@ -1,0 +1,7 @@
+interface:
+  display_name: "Proteus"
+  short_description: "Start the complete Proteus vulnerability research coordinator"
+  default_prompt: "Use $proteus to coordinate continuous vulnerability research for this codebase."
+
+policy:
+  allow_implicit_invocation: false

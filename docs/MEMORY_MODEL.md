@@ -343,6 +343,7 @@ created_at
 Canonical codenames:
 
 ```text
+atlas
 argus
 loom
 chaos
@@ -350,6 +351,7 @@ libris
 mimic
 artificer
 skeptic
+cicada
 ```
 
 ### global_learnings

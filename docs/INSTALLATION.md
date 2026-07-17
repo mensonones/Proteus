@@ -81,6 +81,7 @@ SSH URLs, or local marketplace root directories.
 
 ```powershell
 codex plugin marketplace add rafabd1/Proteus
+codex plugin add proteus@proteus-marketplace
 ```
 
 Pin a ref:
@@ -101,22 +102,30 @@ It exposes the plugin at:
 plugins/proteus
 ```
 
-Then register the MCP server from the CLI install:
+Start a new Codex CLI session after installation. The installed plugin bundles
+its MCP configuration. Register `proteus-mcp` separately only when intentionally
+using the standalone runtime without the plugin.
+
+Install the native Proteus custom-agent profiles globally and start a new Codex
+session again:
 
 ```powershell
-codex mcp add proteus -- proteus-mcp
+proteus-install-codex-agents
 ```
 
-In Codex, invoke the plugin with `@proteus`, for example:
+This installs Atlas, Argus, Loom, Chaos, Libris, Mimic, Artificer, Skeptic, and Cicada
+under `~/.codex/agents/`. The coordinator falls back to generic subagents with
+inlined role contracts when these profiles are not installed.
+
+In Codex CLI, verify the skill with `/skills`, then invoke:
 
 ```text
-@proteus initialize continuous vulnerability research for this repository
+$proteus initialize continuous vulnerability research for this repository
 ```
 
-Use `@proteus` as the normal entrypoint so Codex can load the plugin and choose
-the main coordinator skill plus any specialist skill it needs. Slash-style skill
-mentions are for explicitly targeting a single skill and are less ergonomic now
-that Proteus ships multiple skills.
+Use `$proteus` as the normal CLI entrypoint so Codex can load the full
+coordinator and choose any specialist skill it needs. `@Proteus` is the plugin
+mention on supported ChatGPT desktop surfaces, not Codex CLI syntax.
 
 ## 3. Claude Code Plugin Install
 

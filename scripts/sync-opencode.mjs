@@ -60,7 +60,13 @@ function syncSkillResources(sourceName, sourceDir, destinationDir) {
   for (const child of ["scripts", "references"]) {
     const sourceChild = path.join(sourceDir, child);
     if (fs.existsSync(sourceChild)) {
-      fs.cpSync(sourceChild, path.join(destinationDir, child), { recursive: true });
+      fs.cpSync(sourceChild, path.join(destinationDir, child), {
+        recursive: true,
+        filter: (candidate) => {
+          const basename = path.basename(candidate);
+          return basename !== "__pycache__" && !basename.endsWith(".pyc") && !basename.endsWith(".pyo");
+        }
+      });
     }
   }
 }

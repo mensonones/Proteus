@@ -83,6 +83,7 @@ target-specific vulnerability claims.
 
 When Claude Code subagents are available, delegate bounded independent fronts:
 
+- `proteus-atlas`: read-only architecture and attack-surface mapping before broad planning;
 - `proteus-argus`: component-level review;
 - `proteus-loom`: macro/chaining analysis;
 - `proteus-chaos`: fuzzing and edge-case generation;

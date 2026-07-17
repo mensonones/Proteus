@@ -24,8 +24,8 @@ negative controls, and PoC validation without artificial lab help.
   material.
 - ROI-based surface planning to avoid wandering through the same low-signal
   areas.
-- Named specialist fronts for repeatable multi-agent research: Argus, Loom,
-  Chaos, Libris, Mimic, Artificer, Skeptic, and Cicada.
+- Named specialist fronts for repeatable multi-agent research: Atlas, Argus,
+  Loom, Chaos, Libris, Mimic, Artificer, Skeptic, and Cicada.
 - Mobile-first reversing support for Android/iOS artifacts that separates known
   baseline coverage from non-obvious mobile-specific hypotheses and cheap
   validation experiments.
@@ -80,16 +80,22 @@ TypeScript builds on the target machine.
 
 ```powershell
 codex plugin marketplace add rafabd1/Proteus
+codex plugin add proteus@proteus-marketplace
 ```
 
-Then install or enable the `proteus` plugin from Codex's plugin UI if your host
-does not install marketplace defaults automatically.
+Start a new Codex CLI session after installation. The plugin bundles its MCP
+configuration; a separate `codex mcp add` is only needed for a standalone CLI
+runtime setup that is not using the plugin.
 
-Then register the MCP server from the CLI install:
+Install the nine native Proteus subagent profiles for use across all local
+projects, then start another new Codex session:
 
 ```powershell
-codex mcp add proteus -- proteus-mcp
+proteus-install-codex-agents
 ```
+
+Without this optional global step, the coordinator still delegates through
+generic Codex subagents and inlines the packaged Proteus role contract.
 
 ### 3. Add The Claude Code Plugin
 
@@ -163,11 +169,11 @@ security subagent for bounded component-level vulnerability research.
 
 ## Quick Start
 
-After installing the plugin in Codex, invoke Proteus with `@proteus`. This loads
-the plugin as the entrypoint so the assistant can choose the main coordinator
-skill and any specialist skills it needs. Avoid using a slash-style skill
-mention in Codex for normal Proteus work; slash syntax is better reserved for
-direct skill references when you explicitly want one specific skill.
+After installing the plugin in Codex CLI, start a new session and invoke Proteus
+with `$proteus`. You can confirm discovery with `/skills`. The `$proteus`
+entrypoint loads the main coordinator skill and lets it choose specialist skills
+as needed. `@Proteus` is the plugin mention used by supported ChatGPT desktop
+surfaces, not the Codex CLI skill syntax.
 
 In Claude Code, use the plugin slash command `/proteus`.
 
@@ -177,39 +183,42 @@ directory.
 
 Proteus has both skills and role/subagent contracts. Skills are tactical
 capability packs the coordinator can load when needed. Role contracts are the
-bounded subagent personas such as Argus, Loom, Chaos, Libris, Mimic, Artificer,
-Skeptic, and Cicada. `mobile-reversing` and `maintainability-review` are skills,
+bounded subagent personas such as Atlas, Argus, Loom, Chaos, Libris, Mimic,
+Artificer, Skeptic, and Cicada. `mobile-reversing` and `maintainability-review` are skills,
 not subagent roles. `mobile-reversing` is for mobile artifact research.
 `maintainability-review` is for structural code-quality review. Argus is the
 subagent role for bounded component-level security review, not generic code
-review. For normal Proteus work, start with `@proteus` or `/proteus` and let the
-coordinator choose the right skill or role. Refer to a skill directly only when
-you intentionally want that narrow pass.
+review. For normal Proteus work, start with `$proteus` in Codex CLI or
+`/proteus` in Claude Code and Opencode, then let the coordinator choose the
+right skill or role. Refer to a tactical skill directly only when you
+intentionally want that narrow pass.
 
 Example prompts:
 
 ```text
-@proteus initialize continuous vulnerability research for this repository
+$proteus initialize continuous vulnerability research for this repository
 
-@proteus plan the next high-ROI offensive research round for this codebase
+$proteus plan the next high-ROI offensive research round for this codebase
 
-@proteus use the existing findings and REPORTS folders, avoid duplicates, and focus on realistic exploitability
+$proteus use the existing findings and REPORTS folders, avoid duplicates, and focus on realistic exploitability
 
-@proteus validate this candidate with realistic PoC gates, negative controls, and no forced vulnerable config
+$proteus validate this candidate with realistic PoC gates, negative controls, and no forced vulnerable config
 
-@proteus draft a triage-ready report without internal workflow references
+$proteus draft a triage-ready report without internal workflow references
 
-@proteus inspect this APK as mobile-only, use the mobile-reversing skill, cover the known baseline, and list exploratory hypotheses with cheap validation experiments
+$proteus inspect this APK as mobile-only, use the mobile-reversing skill, cover the known baseline, and list exploratory hypotheses with cheap validation experiments
 ```
 
 When available, Proteus should use persistent goal/campaign features for
-long-running objectives and subagents for bounded fronts such as Argus, Loom,
-Chaos, Libris, Mimic, Artificer, Skeptic, and Cicada. The coordinator still owns
+long-running objectives and subagents for bounded fronts such as Atlas, Argus,
+Loom, Chaos, Libris, Mimic, Artificer, Skeptic, and Cicada. The coordinator still owns
 strategy, memory, dedupe, validation gates, and final kill/promote decisions.
-Codex can use the packaged role contracts in `plugins/proteus/agents/*.md` when
-spawning subagents by reading the contract and inlining it into the delegated
-prompt. These paths are plugin-package paths, not target-workspace paths. Claude
-Code loads the same files as plugin subagents.
+Codex prefers native `proteus-*` custom agent profiles installed by
+`proteus-install-codex-agents`. When those profiles are unavailable, it reads
+the packaged contracts in `plugins/proteus/agents/*.md` and inlines the role
+requirements into a generic subagent prompt. These paths are plugin-package
+paths, not target-workspace paths. Claude Code loads the same Markdown files as
+plugin subagents.
 If the package path is not directly exposed, coordinators should resolve
 contracts from the installed plugin package/cache, never from the target
 workspace.
@@ -346,8 +355,9 @@ coordinator:
   - loads or initializes .vros memory
   - ingests existing findings, reports, docs, and prior research logs
   - observes the repo, toolchain, package managers, tests, and runtime hints
+  - uses Atlas when a large, unfamiliar, mixed, or changed target lacks a fresh map
   - builds a round plan with high-ROI surfaces and skipped low-ROI areas
-  - assigns bounded fronts to Argus, Loom, Chaos, Libris, Mimic, Artificer, Skeptic, or Cicada
+  - assigns bounded fronts to Atlas, Argus, Loom, Chaos, Libris, Mimic, Artificer, Skeptic, or Cicada
   - records hypotheses, evidence, decisions, killed paths, and revisit conditions
   - promotes only candidates that survive the validation gates
   - replans from what was learned instead of restarting from scratch
@@ -368,6 +378,7 @@ efficiency:
 
 | Codename | Focus |
 | --- | --- |
+| Atlas | Read-only architecture and attack-surface mapping, ROI ranking, and bounded work splits before broad planning. |
 | Argus | Bounded component-level security review of local primitives and covered modules. Not generic code review. |
 | Loom | Macro and chaining analysis across components and trust boundaries. |
 | Chaos | Fuzzing, edge-case generation, anomaly matrices, and probes. |
@@ -443,7 +454,7 @@ proteus campaign checkpoint --id <id> [--confirmed a,b] [--killed a,b] [--open a
 proteus branch add --title <text> [--campaign-id <id>] [--round-id <id>]
 proteus link --from-type <type> --from-id <id> --relation <text> --to-type <type> --to-id <id>
 proteus roles
-proteus prompt --role <argus|loom|chaos|libris|mimic|artificer|skeptic|cicada> --surface <text>
+proteus prompt --role <atlas|argus|loom|chaos|libris|mimic|artificer|skeptic|cicada> --surface <text>
 proteus record surface --name <text> [--family <text>] [--files a,b] [--status active|covered|exhausted|low_roi|blocked|watch]
 proteus record hypothesis --title <text> [--surface-id <id>] [--impact <text>]
 proteus record evidence --title <text> [--kind <kind>] [--body <text>]

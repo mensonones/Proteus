@@ -10,6 +10,26 @@ export interface RoleDefinition {
 }
 
 export const ROLES: Record<AgentCodename, RoleDefinition> = {
+  atlas: {
+    codename: "atlas",
+    displayName: "Atlas",
+    family: "architecture-surface-mapping",
+    purpose:
+      "Build an evidence-backed architecture and attack-surface map for large, unfamiliar, mixed, or materially changed targets before broad planning.",
+    startsWhen:
+      "The coordinator lacks a fresh map for a large, unfamiliar, mixed, or materially changed target; skip it for a bounded known target with a fresh map.",
+    requiredOutput: [
+      "architecture and component map with exact evidence",
+      "entrypoints, trust boundaries, and important data/state flows",
+      "runtime, deployment, and target-type context",
+      "recent-risk deltas and architecture drift",
+      "ranked high-ROI surface shortlist",
+      "skipped surfaces and revisit conditions",
+      "unknowns and tooling gaps",
+      "bounded non-overlapping agent splits",
+      "map freshness trigger"
+    ]
+  },
   argus: {
     codename: "argus",
     displayName: "Argus",
@@ -140,6 +160,7 @@ export const ROLES: Record<AgentCodename, RoleDefinition> = {
 };
 
 export const ROLE_ORDER: AgentCodename[] = [
+  "atlas",
   "argus",
   "loom",
   "chaos",

@@ -365,7 +365,7 @@ try {
     throw new Error("proteus_record_agent_output did not auto-link to the active campaign");
   }
   const roles = await request("tools/call", { name: "proteus_roles", arguments: {} });
-  if (!String(roles.content?.[0]?.text ?? "").includes("Argus")) {
+  if (!String(roles.content?.[0]?.text ?? "").includes("Atlas") || !String(roles.content?.[0]?.text ?? "").includes("Argus")) {
     throw new Error("proteus_roles did not return role definitions");
   }
   await request("tools/call", {

@@ -2,6 +2,19 @@
 
 Use this reference after extraction to choose high-signal mobile files.
 
+## Safe Ingestion
+
+- Treat every supplied archive as untrusted. Use the bundled extractor rather
+  than direct `unzip` or `extractall` for the first pass.
+- Keep the output outside directory inputs and use a fresh output directory for
+  every run so stale evidence cannot be confused with current evidence.
+- Do not increase file-count, expanded-size, per-file, or compression-ratio
+  limits without recording why the artifact legitimately needs the override.
+- For XAPK/APKS, preserve which split APK supplied each file. For AAB, preserve
+  the module-relative path.
+- Keep hashes and tool failures in the evidence manifest. A missing or failed
+  tool is a limitation, not permission to infer its expected output.
+
 ## Mobile Context Evidence
 
 Continue as mobile only when there is concrete project or artifact evidence.

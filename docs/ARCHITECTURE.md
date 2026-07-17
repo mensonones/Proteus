@@ -134,6 +134,7 @@ as prompt generation plus output validation.
 Canonical role names:
 
 ```text
+Atlas: architecture and attack-surface mapping.
 Argus: component-level review.
 Loom: macro/chaining analysis.
 Chaos: fuzzing and edge-case generation.

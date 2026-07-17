@@ -44,12 +44,18 @@ platform-specific permission or entitlement drift.
 2. State the mobile artifact and target platform: Android project, iOS project,
    APK, AAB, XAPK, IPA, `.app`, extracted app directory, `index.bundle`, Hermes
    bytecode, `.so`, Mach-O, DEX, or mixed artifact.
-3. Check tool availability with `scripts/mobile_toolchain.py --check`. Use
-   installed tools when present. If a missing tool is materially useful, ask for
-   approval to install it or run `scripts/mobile_toolchain.py --install ...`
-   with the narrowest useful profile.
+3. Check tool availability with `scripts/mobile_toolchain.py --check --json
+   --versions`. Select only the profiles relevant to the artifact. Use installed
+   tools when present. If a missing tool is materially useful, ask for approval
+   to install it or run `scripts/mobile_toolchain.py --install ...` with the
+   narrowest useful profile.
 4. Extract and index artifacts with `scripts/extract_mobile_artifacts.py` when
-   the input is an APK, AAB, ZIP, XAPK, IPA, `.app`, or directory.
+   the input is an APK, AAB, ZIP, XAPK, APKS, IPA, `.app`, or directory. Always
+   use a fresh output directory outside a directory input. Keep the default
+   archive safety limits unless the artifact requires a reviewed, explicit
+   override. The extractor handles nested XAPK/APKS APKs, inventories DEX and
+   high-signal resources, and runs available decompiler/native tools unless
+   `--no-tools` is supplied.
 5. Triage high-signal files first: `AndroidManifest.xml`, `Info.plist`,
    entitlements, DEX/decompiled Java or Kotlin, Swift/Objective-C code,
    `assets/index.*bundle`, Hermes bytecode, `.so` exports/imports, Mach-O
@@ -95,11 +101,14 @@ available static evidence and mark the gap.
 
 ## Bundled Scripts
 
-- `scripts/mobile_toolchain.py`: detect installed tools and optionally install a
-  named profile (`core`, `rn`, `native`, `dynamic`) after approval.
-- `scripts/extract_mobile_artifacts.py`: unpack APK/AAB/ZIP/directory inputs,
-  copy candidate bundles and `.so` files into an output directory, and generate
-  `manifest.json` plus a text triage report.
+- `scripts/mobile_toolchain.py`: detect installed tools, versions, and profile
+  capabilities as text or JSON. Supported profiles are `core`, `android`,
+  `ios`, `rn`, `native`, and `dynamic`; installation remains approval-gated and
+  is offered only where a reliable recipe exists.
+- `scripts/extract_mobile_artifacts.py`: safely unpack APK/AAB/XAPK/APKS/IPA/ZIP
+  inputs, reject traversal/symlinks/suspicious expansion, inventory DEX,
+  manifests, resources, bundles and native files, run available static tools,
+  and generate a unified `manifest.json` plus a text triage report.
 
 Read `references/mobile-artifact-triage.md` when deciding which extracted files
 to prioritize or how to interpret tool output.

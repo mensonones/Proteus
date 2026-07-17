@@ -440,7 +440,7 @@ const tools: ToolDefinition[] = [
     inputSchema: schema(
       {
         root: stringProp("Target root path."),
-        role: stringProp("Role codename: argus, loom, chaos, libris, mimic, artificer, or skeptic."),
+        role: stringProp("Role codename: atlas, argus, loom, chaos, libris, mimic, artificer, skeptic, or cicada."),
         surface: stringProp("Bounded surface assigned by the coordinator."),
         objective: stringProp("Round or front objective."),
         avoid: arrayProp("Known paths, claims, or surfaces to avoid.")

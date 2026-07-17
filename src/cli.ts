@@ -1093,7 +1093,7 @@ Usage:
   proteus branch list [--campaign-id <id>] [--status open|testing|killed|promoted|blocked]
   proteus link --from-type <type> --from-id <id> --relation <text> --to-type <type> --to-id <id>
   proteus roles
-  proteus prompt --role <argus|loom|chaos|libris|mimic|artificer|skeptic|cicada> --surface <text>
+  proteus prompt --role <atlas|argus|loom|chaos|libris|mimic|artificer|skeptic|cicada> --surface <text>
   proteus record surface --name <text> [--family <text>] [--files a,b] [--status active|covered|exhausted|low_roi|blocked|watch]
   proteus record hypothesis --title <text> [--surface-id <id>] [--impact <text>]
   proteus record evidence --title <text> [--kind <kind>] [--body <text>]

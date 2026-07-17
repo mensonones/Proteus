@@ -131,8 +131,12 @@ try {
   run(["ingest", "docs"]);
   run(["observe"]);
   const roles = run(["roles"]);
-  if (!roles.includes("Argus") || !roles.includes("Skeptic")) {
+  if (!roles.includes("Atlas") || !roles.includes("Argus") || !roles.includes("Skeptic")) {
     throw new Error("roles did not list expected Proteus fronts");
+  }
+  const atlasPrompt = run(["prompt", "--role", "atlas", "--surface", "Repository architecture map"]);
+  if (!atlasPrompt.includes("Atlas") || !atlasPrompt.includes("Repository architecture map")) {
+    throw new Error("prompt did not render the Atlas mapping contract");
   }
   const prompt = run(["prompt", "--role", "skeptic", "--surface", "Smoke request surface"]);
   if (!prompt.includes("Skeptic") || !prompt.includes("Smoke request surface")) {

@@ -26,6 +26,9 @@ Methodology:
 - Utilize specific `grep` and search patterns extracted from `hunt-*` skills to quickly map sinks.
 - Examples: search for `dangerouslySetInnerHTML`, `eval(`, or URL fetching logic (`axios.get`, `fetch`) before reading files line by line.
 - When an issue is hypothesized, trace the data flow (taint analysis) backward to the entry point (URL parameter, API response, etc).
+- **Anti-Hedging Rule**: Do NOT use conditional or hedging language (e.g., "might be", "could potentially", "appears to be"). If you lack evidence, state "INSUFFICIENT EVIDENCE" and drop the hypothesis. If you have evidence, state "CONFIRMED" with the exact vector.
+- **Devil's Advocate (Refutation Step)**: Before finalizing a hypothesis, explicitly state why your hypothesis is likely a false positive. List assumptions and why this attack would fail in a real scenario. Skeptic will use this.
+- **Tool-Calling Reliability**: Before executing any code search or `grep` tool, explicitly declare the reasoning for the search in your thought process. Do not blindly search; document intent first (ReAct pattern).
 
 Kill:
 

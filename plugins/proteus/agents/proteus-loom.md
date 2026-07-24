@@ -20,6 +20,14 @@ Prefer non-obvious interactions:
 - trusted metadata crossing an external boundary.
 
 Methodology (Chaining Patterns):
+- Examine trust transitions across module boundaries.
+- Trace inputs from unprivileged entrypoints through parsers to privileged sinks.
+- Look for state desynchronization between components (e.g. backend verifies JWT, microservice implicitly trusts headers).
+- **Anti-Hedging Rule**: Do NOT use conditional or hedging language (e.g., "might be", "could potentially", "appears to be"). If you lack evidence, state "INSUFFICIENT EVIDENCE" and drop the hypothesis. If you have evidence, state "CONFIRMED" with the exact vector.
+- **Devil's Advocate (Refutation Step)**: Before finalizing a chained hypothesis, explicitly state why your chain will likely break in practice. List the exact preconditions that must align for it to work. Skeptic will use this.
+- **Tool-Calling Reliability**: Before executing any code search or `grep` tool, explicitly declare the reasoning for the search in your thought process. Do not blindly search; document intent first (ReAct pattern).
+
+Methodology (Chaining Patterns):
 - Actively look for combinations that escalate impact, applying logic from the `chains/` methodology (e.g. Cache Poisoning + Reflected XSS = Stored XSS at scale).
 - Examples of cross-attack chains: SSRF + DNS Rebinding, Self-XSS + CSRF, DOM XSS on OAuth callback + Fragment capture.
 - Ask: "What does this low-severity bug unlock once it executes?" If an XSS executes, can it fetch a CSRF token or call an admin endpoint? If an SSRF is blind, can it access cloud metadata (IMDS)?

@@ -1,5 +1,44 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- Ephemeral Tor/Proxychains lifecycle script (`plugins/proteus/scripts/tor-ephemeral.sh`)
+  with seven commands: bootstrap, start, check, enforce, relax, stop, purge.
+- Network Operations section in the base research contract requiring all outbound
+  traffic through `proxychains4` and prohibiting host-level `webfetch` usage.
+- Iptables kernel-level enforcement mode (`enforce`/`relax`) that DROP all non-Tor
+  outbound TCP, blocking even host-level HTTP clients.
+- Operational Hygiene section in the base research contract mandating active
+  trace cleanup (8-step scrub checklist) before every agent return or handoff.
+- Per-agent scrub instructions for Artificer, Chaos, Mimic, Cicada, Atlas, and
+  Libris covering temp files, build artifacts, Docker images, proxy captures,
+  and environment variables.
+- Network routing and post-operation scrub directives in web-intel, web-research,
+  and mobile-reversing skills.
+- Tor/Proxychains and hygiene sections in OpenCode `/proteus` command template
+  and Claude Code `commands/proteus.md`.
+- Research artifact anti-leak patterns in `.gitignore` covering findings,
+  reports, proxy captures, credentials, shell history, and extracted artifacts.
+
+### Changed
+
+- Network routing now uses `proxychains4` exclusively; `ALL_PROXY` env var
+  export was removed from the bootstrap flow because it conflicts with
+  proxychains and causes connection failures.
+- Install/cleanup robustness: `install_tor` now reports failures correctly,
+  `nohup` added for shell-independent process lifetime, `stop_ephemeral` kills
+  orphaned processes and cleans stale data directories.
+- Proxychains config fixed from `socks4` to `socks5` for remote DNS support.
+
+### Fixed
+
+- `tor-*` gitignore pattern that accidentally excluded `tor-ephemeral.sh` script;
+  replaced with specific patterns (`tor-data/`, `tor-ephemeral/`, `torrc.local`).
+- Tor process dying when bash shell ended (missing `nohup` in start flow).
+- `install_tor` returning success when package installation failed silently.
+
 ## 1.0.0 - 2026-06-17
 
 ### Added

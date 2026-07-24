@@ -41,6 +41,12 @@ negative controls, and PoC validation without artificial lab help.
 - Triage-ready report draft guidance that follows user/program templates,
   favors natural language, concise root-cause explanation, realistic impact
   scenarios, and manual blackbox-style PoCs.
+- Ephemeral Tor/Proxychains integration for anonymous outbound network
+  operations during research, with optional iptables kernel-level enforcement
+  that blocks all non-Tor traffic (including host-level `webfetch` calls).
+- Mandatory operational hygiene: every agent scrubs temporary files,
+  downloaded artifacts, proxy captures, credentials, shell history, and env
+  vars before returning — including tearing down the ephemeral Tor circuit.
 
 ## Install
 
@@ -393,6 +399,30 @@ is technical evidence worth challenging. No candidate should become report-grade
 until Libris has recorded public intel/timeline results and Skeptic has recorded
 an evidence-backed refutation attempt.
 
+## Network Operations (Ephemeral Tor)
+
+All outbound research traffic must be routed through Tor via Proxychains. Tor
+is ephemeral: installed on demand, used during the round, and purged from the
+system when the campaign ends.
+
+```bash
+bash plugins/proteus/scripts/tor-ephemeral.sh bootstrap   # install + start
+proxychains4 curl https://target.com                      # route via Tor
+bash plugins/proteus/scripts/tor-ephemeral.sh check       # verify circuit
+sudo bash plugins/proteus/scripts/tor-ephemeral.sh enforce  # iptables lockdown
+bash plugins/proteus/scripts/tor-ephemeral.sh stop        # scrub
+bash plugins/proteus/scripts/tor-ephemeral.sh purge       # stop + apt-get purge
+```
+
+Key rules:
+- Use `proxychains4 <command>` for every outbound call. Do not export
+  `ALL_PROXY` — it conflicts with proxychains.
+- Never use the host's built-in `webfetch` tool — it bypasses the OS network
+  stack and cannot be proxied.
+- `enforce` mode applies iptables rules that DROP all non-Tor TCP at the
+  kernel level, blocking even `webfetch` calls.
+- Tor must never persist as a system service after the round ends.
+
 ## Validation Model
 
 A candidate is report-grade only when it satisfies the core gates:
@@ -592,7 +622,15 @@ docs/
 .claude-plugin/
   marketplace.json
 .opencode/
-  agents/proteus-*.md
+  agents/proteus-argus.md
+  agents/proteus-artificer.md
+  agents/proteus-atlas.md
+  agents/proteus-chaos.md
+  agents/proteus-cicada.md
+  agents/proteus-libris.md
+  agents/proteus-loom.md
+  agents/proteus-mimic.md
+  agents/proteus-skeptic.md
   skills/proteus/SKILL.md
   skills/proteus-chaining/SKILL.md
   skills/proteus-checkpoint/SKILL.md
@@ -602,7 +640,12 @@ docs/
   skills/proteus-poc-exploit/SKILL.md
   skills/proteus-web-intel/SKILL.md
   skills/proteus-web-research/SKILL.md
-  templates/*.md
+  skills/maintainability-review/SKILL.md
+  templates/base-research-contract.md
+  templates/candidate-register.md
+  templates/report-draft.md
+  templates/research-contract.md
+  templates/round-plan.md
   templates/round-input.json
 plugins/
   proteus/
@@ -613,19 +656,37 @@ plugins/
     commands/proteus.md
     dist/
     scripts/proteus-mcp.cjs
+    scripts/tor-ephemeral.sh
     skills/continuous-vuln-research/SKILL.md
     skills/chaining/SKILL.md
+    skills/checkpoint/SKILL.md
     skills/codebase-research/SKILL.md
+    skills/codebase-research/hunt-ssrf.md
+    skills/codebase-research/hunt-xss.md
     skills/fuzzing/SKILL.md
     skills/mobile-reversing/SKILL.md
+    skills/mobile-reversing/scripts/
+    skills/mobile-reversing/references/
+    skills/poc-exploit/SKILL.md
     skills/web-intel/SKILL.md
     skills/web-research/SKILL.md
+    skills/maintainability-review/SKILL.md
+    templates/
 src/
   cli.ts
   mcp.ts
   db.ts
   planner.ts
   roles.ts
+  paths.ts
+  schemas.ts
+  types.ts
+  ingest.ts
+  observe.ts
+  exporter.ts
+  lab.ts
+  prompts.ts
+  global-memory.ts
 ```
 
 The root `.opencode/` integration is generated from `plugins/proteus/` by

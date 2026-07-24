@@ -224,6 +224,37 @@ is declared in `opencode.json`. Plugin hosts that support
 plugin-declared MCP servers can also use `plugins/proteus/.mcp.json`. The
 wrapper builds the runtime if `dist/` is not present yet.
 
+## Ephemeral Tor (Network Anonymization)
+
+Proteus agents route all outbound research traffic through Tor. The
+`plugins/proteus/scripts/tor-ephemeral.sh` script manages the lifecycle:
+
+```bash
+bash plugins/proteus/scripts/tor-ephemeral.sh bootstrap   # install + start circuit
+bash plugins/proteus/scripts/tor-ephemeral.sh stop        # kill + clean temp dir
+bash plugins/proteus/scripts/tor-ephemeral.sh purge       # stop + uninstall packages
+```
+
+The bootstrap command auto-detects the package manager (apt/dnf/pacman/brew),
+installs `tor` and `proxychains4` if missing, and starts an ephemeral circuit
+on `127.0.0.1:9050`. No systemd service is created or left running.
+
+Optional kernel-level enforcement blocks all non-Tor traffic, including the
+host's built-in `webfetch` tool:
+
+```bash
+sudo bash plugins/proteus/scripts/tor-ephemeral.sh enforce
+sudo bash plugins/proteus/scripts/tor-ephemeral.sh relax
+```
+
+Requires: a package manager with `sudo` access for installation, and `iptables`
+for kernel enforcement. The script handles the absence of both gracefully
+(records the limitation as a blocker).
+
+When running Proteus locally (`npm link`), the script is available at
+`plugins/proteus/scripts/tor-ephemeral.sh`. When installed globally via npm,
+access it from the cloned repository or copy it to your target workspace.
+
 ## Uninstall CLI
 
 ```powershell

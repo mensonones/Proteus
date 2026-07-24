@@ -2,7 +2,7 @@
 
 ## 1. System Overview
 
-Proteus is composed of five layers:
+Proteus is composed of six layers:
 
 ```mermaid
 flowchart TD
@@ -12,6 +12,8 @@ flowchart TD
   Memory["Structured memory store"]
   Tools["Tool orchestration layer"]
   Labs["Lab and PoC workspace"]
+  NetOps["Network operations (ephemeral Tor)"]
+  Hygiene["Operational hygiene (trace cleanup)"]
   Export["Human exports and reports"]
 
   User --> Plugin
@@ -22,6 +24,10 @@ flowchart TD
   Labs --> Memory
   Memory --> Export
   Coordinator --> Export
+  Coordinator --> NetOps
+  NetOps --> Tools
+  NetOps --> Hygiene
+  Hygiene --> Memory
 ```
 
 The assistant integration layer provides the agent instructions and interaction
@@ -209,6 +215,48 @@ Responsibilities:
 
 Exports are views of memory, not the primary state.
 
+### Network Operations (Ephemeral Tor)
+
+Responsibilities:
+
+- bootstrap ephemeral Tor on demand (install if missing, start circuit);
+- route all outbound traffic through `proxychains4` (not via env vars — they
+  conflict);
+- enforce Tor-only traffic at the kernel level with iptables rules that DROP
+  all non-Tor outbound TCP;
+- verify the exit IP through the Tor Project API;
+- tear down the circuit and data directory during scrub;
+- optionally purge tor and proxychains packages from the system when the
+  campaign ends.
+
+Implementation:
+- `plugins/proteus/scripts/tor-ephemeral.sh` — seven-command lifecycle script
+  (bootstrap, start, check, enforce, relax, stop, purge);
+- iptables `PROTEUS_TOR_ENFORCE` chain for kernel-level enforcement;
+- `nohup` for shell-independent process lifetime.
+
+The enforcement mode blocks the host's built-in `webfetch` tool (which bypasses
+the OS network stack) by DROPing all outbound TCP that does not go through the
+local SOCKS5 proxy on 127.0.0.1:9050. This is a netfilter rule, not a prompt
+suggestion — it cannot be bypassed by ignoring instructions.
+
+### Operational Hygiene (Trace Cleanup)
+
+Responsibilities:
+
+- mandate active trace cleanup before every agent return or handoff;
+- delete temporary files, build artifacts, extracted directories, downloaded
+  content, proxy captures, credential files;
+- unset environment variables holding secrets or proxy configuration;
+- clean shell history for sensitive commands;
+- ensure all research artifacts live inside `.vros/`;
+- tear down the ephemeral Tor circuit and data directory;
+- record deviations when agents fail to scrub.
+
+The hygiene layer is enforced through the base research contract, not through
+a separate runtime process. Every role and skill must comply; non-compliant
+agents must record the deviation in their contract signature.
+
 ## 3. Data Flow
 
 ```text
@@ -378,6 +426,19 @@ The runtime will execute local tools. It must:
 - avoid storing secrets in exports;
 - allow redaction of requests, tokens, and credentials;
 - maintain append-only evidence where feasible.
+
+Operational security for the researcher:
+
+- all outbound network traffic must be routed through ephemeral Tor via
+  Proxychains; direct connections are prohibited;
+- the host's `webfetch` mechanism is blocked by iptables enforcement when
+  active, preventing accidental IP exposure;
+- Tor must not persist as a system service after the round; data directories
+  and packages are purged at campaign end;
+- no research artifacts, credentials, proxy captures, or extracted content
+  may remain on disk after scrub;
+- `.gitignore` blocks accidental commits of findings, reports, proxy dumps,
+  session tokens, shell history, and extracted artifacts.
 
 ## 10. Open Design Questions
 

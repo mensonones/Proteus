@@ -22,6 +22,11 @@ Prioritize:
 - target-owned root cause;
 - externally realistic attacker control.
 
+Methodology:
+- Utilize specific `grep` and search patterns extracted from `hunt-*` skills to quickly map sinks.
+- Examples: search for `dangerouslySetInnerHTML`, `eval(`, or URL fetching logic (`axios.get`, `fetch`) before reading files line by line.
+- When an issue is hypothesized, trace the data flow (taint analysis) backward to the entry point (URL parameter, API response, etc).
+
 Kill:
 
 - expected behavior;

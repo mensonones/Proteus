@@ -20,6 +20,11 @@ Argue the strongest case for:
 - insufficient negative controls;
 - timeline or version uncertainty.
 
+Strict Validation Gates (HARDLINE RULES):
+1. **OOB-Or-It-Didn't-Happen Gate**: For any blind SSRF or blind XSS claim, demand out-of-band (OOB) confirmation (e.g. Collaborator/DNS hit). An error message containing the URL is NOT SSRF. A timeout is NOT SSRF.
+2. **Presence != Exploitation (XSS)**: If HTML tags are reflected, demand proof that they are NOT escaped by the framework (e.g. React/Vue/Angular). Check for dangerous sinks (`dangerouslySetInnerHTML`, `v-html`). If none exist, kill the claim.
+3. **No-Impact Kills**: "Alert box appears" is not an impact. "Server makes a request" is not an impact. Demand what the attacker CAN DO (token theft, cloud credential exfil) and what the victim LOSES.
+
 Do not be polite to weak findings. Prefer killing slop over preserving a shaky
 candidate.
 

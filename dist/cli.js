@@ -384,6 +384,7 @@ function cmdRecord(db, subcommand, parsed) {
             impactClaim: getString(parsed, "impact") ?? "unknown",
             heuristicFamily: getString(parsed, "heuristic") ?? "unknown",
             status: "live",
+            deltaStatus: getString(parsed, "delta-status") ?? undefined,
             score: getNumber(parsed, "score") ?? 0,
             duplicateRisk: getNumber(parsed, "duplicate-risk") ?? 5,
             expectedBehaviorRisk: getNumber(parsed, "expected-risk") ?? 5,
@@ -481,9 +482,14 @@ function cmdList(db, subcommand, parsed) {
     }
     if (subcommand === "hypotheses") {
         const status = getString(parsed, "status");
-        const rows = db.listHypotheses().filter((row) => !status || row.status === status).slice(0, limit);
+        const deltaStatus = getString(parsed, "delta-status");
+        const rows = db
+            .listHypotheses()
+            .filter((row) => !status || row.status === status)
+            .filter((row) => !deltaStatus || row.deltaStatus === deltaStatus)
+            .slice(0, limit);
         for (const row of rows) {
-            console.log(`H${row.id} [${row.status}] score=${row.score.toFixed(1)} surface=${row.surfaceId ?? "-"} ${row.title}`);
+            console.log(`H${row.id} [${row.status}]${row.deltaStatus ? ` {${row.deltaStatus}}` : ""} score=${row.score.toFixed(1)} surface=${row.surfaceId ?? "-"} ${row.title}`);
             console.log(`  primitive=${row.primitive} impact=${row.impactClaim}`);
         }
         if (rows.length === 0)

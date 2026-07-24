@@ -145,10 +145,10 @@ class ProteusDb {
         const result = this.db
             .prepare(`INSERT INTO hypotheses
           (target_id, surface_id, title, primitive, attacker_boundary, impact_claim,
-           heuristic_family, status, score, duplicate_risk, expected_behavior_risk,
+           heuristic_family, status, delta_status, score, duplicate_risk, expected_behavior_risk,
            validation_cost, kill_criteria, revisit_condition, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
-            .run(target.id, hypothesis.surfaceId ?? null, hypothesis.title, hypothesis.primitive, hypothesis.attackerBoundary, hypothesis.impactClaim, hypothesis.heuristicFamily, hypothesis.status, hypothesis.score, hypothesis.duplicateRisk, hypothesis.expectedBehaviorRisk, hypothesis.validationCost, hypothesis.killCriteria, hypothesis.revisitCondition, now, now);
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+            .run(target.id, hypothesis.surfaceId ?? null, hypothesis.title, hypothesis.primitive, hypothesis.attackerBoundary, hypothesis.impactClaim, hypothesis.heuristicFamily, hypothesis.status, hypothesis.deltaStatus ?? null, hypothesis.score, hypothesis.duplicateRisk, hypothesis.expectedBehaviorRisk, hypothesis.validationCost, hypothesis.killCriteria, hypothesis.revisitCondition, now, now);
         const id = Number(result.lastInsertRowid);
         this.indexFts("hypothesis", id, `${hypothesis.title}\n${hypothesis.primitive}\n${hypothesis.attackerBoundary}\n${hypothesis.impactClaim}`);
         return id;
@@ -662,6 +662,7 @@ class ProteusDb {
         this.applyMigration("2026-05-17-validation-gates-surfaces-and-focused-duplicates", BASE_SCHEMA_SQL);
         this.applyMigration("2026-06-17-campaigns-links-branches", CAMPAIGN_SCHEMA_SQL);
         this.applyMigration("2026-06-17-campaign-checkpoints", CAMPAIGN_CHECKPOINT_SCHEMA_SQL);
+        this.applyMigration("2026-07-24-hypothesis-delta-tracking", HYPOTHESIS_DELTA_SCHEMA_SQL);
         this.setMetadata("proteus_version", CURRENT_PROTEUS_VERSION);
     }
     ensureMetadataTable() {
@@ -945,6 +946,9 @@ const CAMPAIGN_CHECKPOINT_SCHEMA_SQL = `
         created_at TEXT NOT NULL
       );
 `;
+const HYPOTHESIS_DELTA_SCHEMA_SQL = `
+      ALTER TABLE hypotheses ADD COLUMN delta_status TEXT;
+`;
 const duplicateSourceKinds = new Set(["finding", "report"]);
 function toSourceRow(row) {
     return {
@@ -980,6 +984,7 @@ function toHypothesisRow(row) {
         impactClaim: String(row.impact_claim),
         heuristicFamily: String(row.heuristic_family),
         status: String(row.status),
+        deltaStatus: row.delta_status ? String(row.delta_status) : undefined,
         score: Number(row.score),
         killCriteria: String(row.kill_criteria ?? ""),
         revisitCondition: String(row.revisit_condition ?? "")

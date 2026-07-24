@@ -19,6 +19,11 @@ Prefer non-obvious interactions:
 - adapter divergence creating a different security contract;
 - trusted metadata crossing an external boundary.
 
+Methodology (Chaining Patterns):
+- Actively look for combinations that escalate impact, applying logic from the `chains/` methodology (e.g. Cache Poisoning + Reflected XSS = Stored XSS at scale).
+- Examples of cross-attack chains: SSRF + DNS Rebinding, Self-XSS + CSRF, DOM XSS on OAuth callback + Fragment capture.
+- Ask: "What does this low-severity bug unlock once it executes?" If an XSS executes, can it fetch a CSRF token or call an admin endpoint? If an SSRF is blind, can it access cloud metadata (IMDS)?
+
 Required output:
 
 - plausible chains;

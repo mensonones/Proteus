@@ -41,6 +41,11 @@
       ]
     }
   ],
+  "crossWaveDelta": {
+    "newHypotheses": 0,
+    "persistentHypotheses": 0,
+    "regressions": 0
+  },
   "stopConditions": [
     "Report-grade candidate needs user decision.",
     "Selected surfaces are exhausted with recorded evidence.",

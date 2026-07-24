@@ -67,6 +67,7 @@ export const hypothesisInputSchema: Parser<HypothesisInput> = {
         ["live", "candidate", "watchlist", "discarded", "promoted_to_poc", "report_grade"],
         "live"
       ),
+      deltaStatus: optionalEnumValue(value.deltaStatus, ["new", "regression", "persistent", "change", "untracked"]),
       score: clampNumber(value.score, 0, 100, 0),
       duplicateRisk: clampNumber(value.duplicateRisk, 0, 10, 5),
       expectedBehaviorRisk: clampNumber(value.expectedBehaviorRisk, 0, 10, 5),
@@ -211,4 +212,8 @@ function numberArray(input: unknown): number[] {
 
 function enumValue<const T extends string>(input: unknown, allowed: readonly T[], fallback: T): T {
   return typeof input === "string" && (allowed as readonly string[]).includes(input) ? (input as T) : fallback;
+}
+
+function optionalEnumValue<const T extends string>(input: unknown, allowed: readonly T[]): T | undefined {
+  return typeof input === "string" && (allowed as readonly string[]).includes(input) ? (input as T) : undefined;
 }

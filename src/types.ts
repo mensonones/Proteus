@@ -26,6 +26,13 @@ export type SurfaceStatus =
   | "blocked"
   | "watch";
 
+export type DeltaStatus =
+  | "new"
+  | "regression"
+  | "persistent"
+  | "change"
+  | "untracked";
+
 export type HypothesisStatus =
   | "live"
   | "candidate"
@@ -114,6 +121,7 @@ export interface HypothesisInput {
   impactClaim: string;
   heuristicFamily: string;
   status: HypothesisStatus;
+  deltaStatus?: DeltaStatus;
   score: number;
   duplicateRisk: number;
   expectedBehaviorRisk: number;

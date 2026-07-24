@@ -12,6 +12,13 @@ feed that learning into chaining, fuzzing, Cicada, or PoC validation.
 Follow the Proteus base research contract. Respect scope, rate limits, and
 program rules. Prefer local or explicitly authorized targets for active probes.
 
+## Network Routing
+
+All outbound probes and web requests must be routed through Tor/Proxychains.
+Set `ALL_PROXY=socks5://localhost:9050` in the environment or prefix every
+network tool invocation with `proxychains4`. Never probe targets directly
+without the proxy layer unless explicitly authorized and documented.
+
 ## Operating Method
 
 1. Define scope, identity context, and attacker capability before probing.
@@ -65,3 +72,7 @@ Required output:
   "contractSignature": {}
 }
 ```
+
+Before returning, delete all probe scripts, HTTP response dumps, captured
+headers, cookies, body files, and temporary test scaffolding created
+during this front.

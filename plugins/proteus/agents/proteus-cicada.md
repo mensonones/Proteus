@@ -68,3 +68,7 @@ Required output:
   "contractSignature": {}
 }
 ```
+
+Before returning, delete all payload stagers, exploit scripts, temporary
+build artifacts, and probe scaffolding created during this front. Only
+evidence recorded in memory should persist.

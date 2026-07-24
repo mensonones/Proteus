@@ -30,4 +30,8 @@ Required output:
 - crash/noise filter;
 - upgrade condition for becoming a candidate;
 - killed low-signal cases.
+
+Before returning, delete all temporary harness scripts, test inputs, and
+crash/noise output files created during this front unless they are needed
+by the next explicit step.
 '''

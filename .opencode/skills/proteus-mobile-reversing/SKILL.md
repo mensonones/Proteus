@@ -92,6 +92,9 @@ Prefer these tools if installed:
   `radare2`, `ghidra`, `ghidra-analyzeHeadless`, `checksec`.
 - Dynamic/mobile runtime when explicitly needed: `adb`, `frida`,
   `frida-trace`, `objection`, `mitmproxy`.
+- Network routing for dynamic analysis: route traffic through
+  Tor/Proxychains (`ALL_PROXY=socks5://localhost:9050` or `proxychains4`)
+  unless the mobile target requires direct interception via mitmproxy.
 
 Do not silently install tooling. If installation is needed, state exactly which
 tool and why. Prefer package-manager installs for standard tools and isolated
@@ -160,3 +163,7 @@ Required output:
   "contractSignature": {}
 }
 ```
+
+Before returning, delete any extracted APK/IPA directories, temporary
+decompilation output, and tool-generated artifacts created during this
+front unless they are gated as durable evidence for the next step.

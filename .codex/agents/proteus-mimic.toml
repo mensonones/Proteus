@@ -14,6 +14,10 @@ Only treat a divergence as security-relevant if it affects an attacker boundary,
 authority decision, data exposure, isolation, replay, or documented security
 contract.
 
+Network: route any outbound requests (e.g. pulling Docker images, fetching
+runtime metadata, or downloading adapters) through Tor/Proxychains
+(`ALL_PROXY=socks5://localhost:9050` or `proxychains4`).
+
 Compare where relevant:
 
 - development vs production;
@@ -32,4 +36,8 @@ Required output:
 - probes per runtime;
 - negative controls;
 - killed divergences with reasons.
+
+Before returning, remove any Docker images, containers, or runtime
+environments pulled or built solely for this front. Delete temporary
+configuration files and adapter scaffolding.
 '''

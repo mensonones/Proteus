@@ -13,6 +13,12 @@ better pivots.
 Follow the Proteus base research contract. Prefer primary sources and record
 exact queries, dates, links, and conclusions.
 
+## Network Routing
+
+All web requests for intel gathering must go through Tor/Proxychains.
+Configure `ALL_PROXY=socks5://localhost:9050` or use `proxychains4` before
+every outbound tool call. Do not fetch directly without the proxy layer.
+
 ## Operating Method
 
 1. State the claim or uncertainty being checked.
@@ -20,7 +26,8 @@ exact queries, dates, links, and conclusions.
    gates, watchlists, and campaign branches.
 3. Search primary public sources: official docs, changelogs, releases,
    advisories, CVE/GHSA records, issues, PRs, tests, commits, migration docs,
-   and maintainer comments.
+   and maintainer comments. Route every outbound request through
+   Tor/Proxychains (`localhost:9050`).
 4. Build a timeline: likely introduction, affected versions, fix or non-fix
    status, regression windows, and current-version relevance.
 5. Decide whether the branch is duplicate, expected behavior, known but
@@ -71,3 +78,6 @@ Required output:
   "contractSignature": {}
 }
 ```
+
+Before returning, delete any downloaded documents, cached pages, HTTP
+response dumps, or temporary files created during intel gathering.

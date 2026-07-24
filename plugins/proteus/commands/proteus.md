@@ -44,6 +44,64 @@ Prefer Proteus MCP tools when available. If MCP tools are not available, use the
 `proteus` CLI. If neither is available, maintain `.vros/exports/` files with the
 same schema.
 
+## Network And Anonymization (Ephemeral Tor)
+
+Tor must be ephemeral: installed on demand, used during the round, removed
+afterwards. Never leave Tor running as a persistent service.
+
+*Bootstrap:*
+```
+bash plugins/proteus/scripts/tor-ephemeral.sh bootstrap
+```
+Installs tor/proxychains if missing, starts the circuit (not as a service).
+Do NOT export ALL_PROXY — it conflicts with proxychains.
+
+*Routing:*
+- Use **exclusively** `proxychains4` for every outbound call. `proxychains4`
+  hooks all network syscalls (curl, wget, python requests, Go net/http).
+  **NEVER use `webfetch` or any host-level fetch tool.** They bypass the OS
+  network stack. **Never** export `ALL_PROXY`/`HTTP_PROXY` — they conflict
+  with proxychains and break connections.
+- Verify: `proxychains4 curl -s https://check.torproject.org/api/ip`
+
+*Kernel enforcement (optional, recommended):*
+```
+sudo bash plugins/proteus/scripts/tor-ephemeral.sh enforce
+```
+Adds iptables rules that DROP all non-Tor outbound TCP. This blocks `webfetch`
+and any direct connection at the kernel level — it cannot be bypassed by
+ignoring instructions. Relax with: `relax`.
+
+*Teardown (every scrub):*
+```
+bash plugins/proteus/scripts/tor-ephemeral.sh stop
+```
+
+*Full purge (end of campaign):*
+```
+bash plugins/proteus/scripts/tor-ephemeral.sh purge
+```
+
+If the bundled script is not reachable, follow the inline steps in the
+base research contract. Never connect directly without the proxy layer.
+
+## Operational Hygiene (Trace Cleanup)
+
+Before every return or handoff, every agent must scrub traces:
+
+1. Delete temporary files, scripts, build artifacts, and extracted directories.
+2. Remove downloads, expanded APK/IPA, Docker images, and temporary clones.
+3. Delete proxy captures (*.har, *.pcap, mitmproxy dumps) after analysis.
+4. Unset environment variables holding credentials, tokens, and keys.
+5. Remove any file written outside `.vros/` (reports, labs, logs).
+6. Restore or unset `ALL_PROXY`, `HTTP_PROXY`, `HTTPS_PROXY`.
+7. **Kill ephemeral Tor process and delete /tmp/tor-ephemeral.** Use the
+   script: `bash plugins/proteus/scripts/tor-ephemeral.sh stop`. On campaign
+   end: `bash plugins/proteus/scripts/tor-ephemeral.sh purge`.
+
+Never commit research output to public repos. Non-compliant agents must record
+the deviation.
+
 Useful CLI flow:
 
 ```bash

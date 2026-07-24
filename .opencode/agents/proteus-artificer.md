@@ -41,3 +41,7 @@ Required output:
 - short snippets with didactic explanation;
 - triage-ready report draft that does not mention Proteus, `.vros`, subagents,
   local workspace paths, or internal research workflow.
+
+Before returning, scrub all temporary files, build artifacts, and lab
+scaffolding created during this front. Only the lab directory inside `.vros/`
+and the report draft should persist.

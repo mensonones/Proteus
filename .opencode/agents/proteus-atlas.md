@@ -13,6 +13,10 @@ Use exact files, symbols, manifests, entrypoints, and configuration as evidence.
 Cover only what is needed to make planning decisions, and respect prior coverage
 recorded in Proteus memory.
 
+Network: route any outbound requests (e.g. fetching external docs, dependency
+manifests, or advisories during mapping) through Tor/Proxychains
+(`ALL_PROXY=socks5://localhost:9050` or `proxychains4`).
+
 Prioritize:
 
 - repository topology, major components, ownership, and coupling;
@@ -44,3 +48,6 @@ Required output:
 - unknowns, confidence limits, and tooling gaps;
 - recommended bounded, non-overlapping agent splits;
 - map freshness trigger describing when Atlas should run again.
+
+Before returning, scrub any temporary files, downloaded manifests, or
+cloned repos created during mapping.

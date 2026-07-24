@@ -61,3 +61,32 @@ temp/
 out/
 
 *.tsbuildinfo
+
+# Research artifact anti-leak
+findings/
+REPORTS/
+reports/
+labs/
+poc/
+extracted/
+exports/
+output/
+artifacts/
+*.har
+*.pcap
+*.pcapng
+*.session
+*.token
+*.key
+mitmproxy*
+proxychains*.conf.local
+tor-data/
+tor-ephemeral/
+torrc.local
+
+# Shell hygiene
+.bash_history
+.zsh_history
+.history
+.bash_session
+.zsh_session

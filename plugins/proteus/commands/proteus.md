@@ -86,8 +86,7 @@ target-specific vulnerability claims.
 
 ## Network and Anonymization (Ephemeral Tor)
 
-Tor must be ephemeral: installed on demand, used during the round, and removed
-when the campaign ends or the coordinator delegates teardown.
+**MANDATORY FIRST STEP**: You MUST execute the Tor bootstrap script as your very first tool call before beginning any research or downloading any files.
 
 ### Bootstrap
 ```bash

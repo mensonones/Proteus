@@ -16,7 +16,11 @@ const skillMap = [
   ["mobile-reversing", "proteus-mobile-reversing"],
   ["poc-exploit", "proteus-poc-exploit"],
   ["web-intel", "proteus-web-intel"],
-  ["web-research", "proteus-web-research"]
+  ["web-research", "proteus-web-research"],
+  ["logic-and-edge-case-review", "logic-and-edge-case-review"],
+  ["defensive-security-review", "defensive-security-review"],
+  ["performance-scale-review", "performance-scale-review"],
+  ["meta/full-review", "full-review"]
 ];
 
 syncDirectory(path.join(pluginRoot, "agents"), path.join(openCodeRoot, "agents"));

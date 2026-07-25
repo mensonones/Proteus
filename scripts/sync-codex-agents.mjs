@@ -7,7 +7,7 @@ const sourceRoot = path.join(repoRoot, "plugins", "proteus", "agents");
 const destinationRoot = path.join(repoRoot, ".codex", "agents");
 
 const roleSettings = {
-  "proteus-atlas": { sandbox: "read-only", reasoning: "high", nicknames: ["Atlas"] },
+  "proteus-generalist": { sandbox: "read-only", reasoning: "high", nicknames: ["Generalist"] },
   "proteus-argus": { sandbox: "read-only", reasoning: "high", nicknames: ["Argus"] },
   "proteus-loom": { sandbox: "read-only", reasoning: "high", nicknames: ["Loom"] },
   "proteus-chaos": { sandbox: "workspace-write", reasoning: "high", nicknames: ["Chaos"] },

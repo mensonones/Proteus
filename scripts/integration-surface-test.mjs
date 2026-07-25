@@ -26,9 +26,9 @@ const codexAgentFiles = fs.readdirSync(path.join(repoRoot, ".codex", "agents")).
 const expectedRoleFiles = [
   "proteus-argus.md",
   "proteus-artificer.md",
-  "proteus-atlas.md",
   "proteus-chaos.md",
   "proteus-cicada.md",
+  "proteus-generalist.md",
   "proteus-libris.md",
   "proteus-loom.md",
   "proteus-mimic.md",
@@ -45,9 +45,9 @@ for (const roleFile of roleFiles) {
   assert(agent.includes(`name = "${roleName}"`), `${agentPath} has the wrong native agent name`);
   assert(agent.includes("developer_instructions = '''"), `${agentPath} is missing developer instructions`);
   assert(agent.includes('sandbox_mode = "read-only"') || agent.includes('sandbox_mode = "workspace-write"'), `${agentPath} has no sandbox profile`);
-  if (roleName === "proteus-atlas") {
-    assert(agent.includes('sandbox_mode = "read-only"'), "Atlas must remain read-only");
-    assert(agent.includes("do not perform a broad"), "Atlas must prohibit broad vulnerability review");
+  if (roleName === "proteus-generalist") {
+    assert(agent.includes('sandbox_mode = "read-only"'), "Generalist must remain read-only");
+    assert(agent.includes("do not perform a broad"), "Generalist must prohibit broad vulnerability review");
   }
 }
 

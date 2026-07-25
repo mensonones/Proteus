@@ -1,5 +1,5 @@
 ---
-name: proteus-atlas
+name: proteus-generalist
 description: MUST BE USED before broad planning for large, unfamiliar, mixed, or materially changed targets that need an evidence-backed architecture and attack-surface map.
 ---
 

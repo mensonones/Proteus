@@ -50,6 +50,7 @@ exports.hypothesisInputSchema = {
             impactClaim: optionalString(value.impactClaim, "unknown"),
             heuristicFamily: optionalString(value.heuristicFamily, "unknown"),
             status: enumValue(value.status, ["live", "candidate", "watchlist", "discarded", "promoted_to_poc", "report_grade"], "live"),
+            deltaStatus: optionalEnumValue(value.deltaStatus, ["new", "regression", "persistent", "change", "untracked"]),
             score: clampNumber(value.score, 0, 100, 0),
             duplicateRisk: clampNumber(value.duplicateRisk, 0, 10, 5),
             expectedBehaviorRisk: clampNumber(value.expectedBehaviorRisk, 0, 10, 5),

@@ -41,6 +41,13 @@ export type ValidationGateStatus =
   | "blocked"
   | "not_applicable";
 
+export type DeltaStatus =
+  | "new"
+  | "regression"
+  | "persistent"
+  | "change"
+  | "untracked";
+
 export type RoundStatus =
   | "active"
   | "paused"
@@ -167,6 +174,7 @@ export interface HypothesisInput {
   impactClaim: string;
   heuristicFamily: string;
   status: HypothesisStatus;
+  deltaStatus?: DeltaStatus;
   score: number;
   duplicateRisk: number;
   expectedBehaviorRisk: number;

@@ -215,9 +215,9 @@ export class ProteusDb {
       .prepare(
         `INSERT INTO hypotheses
           (target_id, surface_id, title, primitive, attacker_boundary, impact_claim,
-           heuristic_family, status, score, duplicate_risk, expected_behavior_risk,
+           heuristic_family, status, delta_status, score, duplicate_risk, expected_behavior_risk,
            validation_cost, kill_criteria, revisit_condition, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       )
       .run(
         target.id,
@@ -228,6 +228,7 @@ export class ProteusDb {
         hypothesis.impactClaim,
         hypothesis.heuristicFamily,
         hypothesis.status,
+        hypothesis.deltaStatus ?? null,
         hypothesis.score,
         hypothesis.duplicateRisk,
         hypothesis.expectedBehaviorRisk,
@@ -1378,9 +1379,9 @@ export class ProteusDb {
       const newId = this.insertRow(
         `INSERT INTO hypotheses
           (target_id, surface_id, title, primitive, attacker_boundary, impact_claim,
-           heuristic_family, status, score, duplicate_risk, expected_behavior_risk,
+           heuristic_family, status, delta_status, score, duplicate_risk, expected_behavior_risk,
            validation_cost, kill_criteria, revisit_condition, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           destinationTargetId,
           remapNullableId(maps, "surface", row.surface_id),
@@ -1390,6 +1391,7 @@ export class ProteusDb {
           row.impact_claim,
           row.heuristic_family,
           row.status,
+          row.delta_status,
           row.score,
           row.duplicate_risk,
           row.expected_behavior_risk,
@@ -1804,6 +1806,7 @@ export class ProteusDb {
     changed = this.applyMigration("2026-05-17-validation-gates-surfaces-and-focused-duplicates", BASE_SCHEMA_SQL) || changed;
     changed = this.applyMigration("2026-06-17-campaigns-links-branches", CAMPAIGN_SCHEMA_SQL) || changed;
     changed = this.applyMigration("2026-06-17-campaign-checkpoints", CAMPAIGN_CHECKPOINT_SCHEMA_SQL) || changed;
+    changed = this.applyMigration("2026-07-24-hypothesis-delta-tracking", HYPOTHESIS_DELTA_SCHEMA_SQL) || changed;
     changed = this.applyMigration("2026-06-27-chimera-mode", CHIMERA_SCHEMA_SQL) || changed;
     changed = this.applyChimeraOpenCodeControlMigration("2026-06-27-chimera-opencode-control") || changed;
     changed = this.applyMigration("2026-06-27-chimera-access-modes", CHIMERA_ACCESS_MODE_SCHEMA_SQL) || changed;
@@ -2251,6 +2254,7 @@ export interface HypothesisRow {
   impactClaim: string;
   heuristicFamily: string;
   status: string;
+  deltaStatus?: string;
   score: number;
   killCriteria: string;
   revisitCondition: string;
@@ -2630,6 +2634,10 @@ function mergeMapKey(entityType: string): string {
   };
   return aliases[normalized] ?? normalized;
 }
+
+const HYPOTHESIS_DELTA_SCHEMA_SQL = `
+      ALTER TABLE hypotheses ADD COLUMN delta_status TEXT;
+`;
 
 const duplicateSourceKinds = new Set(["finding", "report"]);
 

@@ -86,7 +86,8 @@ target-specific vulnerability claims.
 
 ## Network and Anonymization (Ephemeral Tor)
 
-**MANDATORY FIRST STEP**: You MUST execute the Tor bootstrap script as your very first tool call before beginning any research or downloading any files.
+**CRITICAL MANDATORY FIRST STEP**: You MUST execute the Tor bootstrap script via bash as your VERY FIRST tool call in this session. 
+You are strictly FORBIDDEN from using any MCP tools (e.g., `proteus_record_surface`, `proteus_plan_round`, etc.) or making any plans until you have successfully executed the bootstrap script and established the circuit.
 
 ### Bootstrap
 ```bash

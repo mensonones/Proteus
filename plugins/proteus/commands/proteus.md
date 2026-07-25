@@ -86,7 +86,7 @@ target-specific vulnerability claims.
 
 ## Network and Anonymization (Ephemeral Tor)
 
-**CRITICAL MANDATORY FIRST STEP**: You MUST execute the Tor bootstrap script via bash as your VERY FIRST tool call in this session. 
+**CRITICAL MANDATORY FIRST STEP**: You MUST execute the Tor bootstrap script via bash as your VERY FIRST tool call in this session.
 You are strictly FORBIDDEN from using any MCP tools (e.g., `proteus_record_surface`, `proteus_plan_round`, etc.) or making any plans until you have successfully executed the bootstrap script and established the circuit.
 
 ### Bootstrap
@@ -94,7 +94,8 @@ You are strictly FORBIDDEN from using any MCP tools (e.g., `proteus_record_surfa
 bash plugins/proteus/scripts/tor-ephemeral.sh bootstrap
 ```
 Installs tor/proxychains if missing, starts the circuit (not as a service),
-exports `ALL_PROXY=socks5://localhost:9050`, and waits for 100% bootstrap.
+and waits for 100% bootstrap. It deliberately does not export proxy environment
+variables; route individual commands through `proxychains4`.
 
 ### Routing
 - Use **exclusively** `proxychains4` for all outbound requests. **Never** export `ALL_PROXY` yourself — it conflicts with proxychains and breaks connections.

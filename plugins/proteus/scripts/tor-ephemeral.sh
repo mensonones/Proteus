@@ -2,18 +2,18 @@
 set -euo pipefail
 
 TOR_SOCKS_PORT="${TOR_SOCKS_PORT:-9050}"
-TOR_DATA_DIR="${TOR_DATA_DIR:-/tmp/tor-ephemeral-$$}"
-TOR_PID_FILE="${TOR_PID_FILE:-/tmp/tor-ephemeral-$$.pid}"
+TOR_DATA_DIR="${TOR_DATA_DIR:-/tmp/tor-ephemeral}"
+TOR_PID_FILE="${TOR_PID_FILE:-/tmp/tor-ephemeral.pid}"
 PROXYCHAINS_CONF="${PROXYCHAINS_CONF:-/etc/proxychains4.conf}"
 
 log() { printf '[tor-ephemeral] %s\n' "$*" >&2; }
 
 install_tor() {
-  if command -v tor &>/dev/null; then
-    log "tor binary found at $(command -v tor)"
+  if command -v tor &>/dev/null && command -v proxychains4 &>/dev/null; then
+    log "tor and proxychains4 binaries found"
     return 0
   fi
-  log "tor not found, installing temporarily..."
+  log "tor or proxychains4 not found, installing temporarily..."
   local installed=0
   if command -v apt-get &>/dev/null; then
     sudo apt-get update -qq && sudo apt-get install -y -qq tor proxychains4 && installed=1
@@ -38,6 +38,21 @@ install_tor() {
 }
 
 start_ephemeral() {
+  if [ -f "$TOR_PID_FILE" ]; then
+    local existing_pid
+    existing_pid=$(cat "$TOR_PID_FILE" 2>/dev/null || true)
+    if [ -n "$existing_pid" ] && kill -0 "$existing_pid" 2>/dev/null; then
+      if grep -q "Bootstrapped 100%" "$TOR_DATA_DIR/tor.log" 2>/dev/null; then
+        log "reusing active tor circuit (pid=$existing_pid) on socks5://localhost:$TOR_SOCKS_PORT"
+        return 0
+      fi
+      log "tor process $existing_pid is still bootstrapping; waiting for the existing circuit"
+      wait_for_bootstrap
+      return $?
+    fi
+    rm -f "$TOR_PID_FILE"
+  fi
+
   mkdir -p "$TOR_DATA_DIR"
   nohup tor --SocksPort "$TOR_SOCKS_PORT" \
      --DataDirectory "$TOR_DATA_DIR" \
@@ -48,18 +63,22 @@ start_ephemeral() {
   local tor_pid=$!
   echo "$tor_pid" > "$TOR_PID_FILE"
   log "tor starting (pid=$tor_pid)..."
-  # Wait for tor to bootstrap
+  wait_for_bootstrap
+}
+
+wait_for_bootstrap() {
   local attempts=0
   while [ $attempts -lt 30 ]; do
     sleep 1
     if grep -q "Bootstrapped 100%" "$TOR_DATA_DIR/tor.log" 2>/dev/null; then
       log "tor circuit established on socks5://localhost:$TOR_SOCKS_PORT"
-  log "use: proxychains4 <command>  (ALL_PROXY is deliberately NOT set)"
+      log "use: proxychains4 <command>  (ALL_PROXY is deliberately NOT set)"
       return 0
     fi
     attempts=$((attempts + 1))
   done
-  log "WARNING: tor bootstrap may not be complete after 30s. Continuing anyway."
+  log "ERROR: tor bootstrap did not complete after 30s"
+  return 1
 }
 
 check_ip() {
@@ -88,8 +107,7 @@ stop_ephemeral() {
   # Kill any orphaned tor processes using this data dir
   pkill -f "tor.*$TOR_SOCKS_PORT" 2>/dev/null || true
   pkill -f "tor.*$TOR_DATA_DIR" 2>/dev/null || true
-  # Clean up temp data directories
-  rm -rf /tmp/tor-ephemeral-* 2>/dev/null || true
+  rm -rf "$TOR_DATA_DIR" 2>/dev/null || true
   log "tor data directory removed"
   unset ALL_PROXY HTTP_PROXY HTTPS_PROXY
 }

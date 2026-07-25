@@ -13,11 +13,16 @@ const globalRoot = fs.mkdtempSync(path.join(os.tmpdir(), "proteus-mcp-global-smo
 const mergeSourceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "proteus-mcp-merge-source-smoke-"));
 const packagedPluginRoot = path.join(globalRoot, "packaged-plugin");
 fs.cpSync(path.join(repoRoot, "plugins", "proteus"), packagedPluginRoot, { recursive: true });
-const serverPath = path.join(packagedPluginRoot, "scripts", "proteus-mcp.cjs");
+const pluginManifest = JSON.parse(fs.readFileSync(path.join(packagedPluginRoot, ".codex-plugin", "plugin.json"), "utf8"));
+const pluginMcpServer = pluginManifest.mcpServers?.proteus;
+if (!pluginMcpServer?.command || !Array.isArray(pluginMcpServer.args)) {
+  throw new Error("packaged Codex plugin MCP configuration is invalid");
+}
 const mockOpenCodeLauncher = createMockOpenCodeLauncher(globalRoot);
 
-const child = spawn(process.execPath, [serverPath], {
-  cwd: repoRoot,
+const pluginMcpCommand = pluginMcpServer.command === "node" ? process.execPath : pluginMcpServer.command;
+const child = spawn(pluginMcpCommand, pluginMcpServer.args, {
+  cwd: packagedPluginRoot,
   env: {
     ...process.env,
     PROTEUS_GLOBAL_MEMORY_PATH: path.join(globalRoot, "global.sqlite"),

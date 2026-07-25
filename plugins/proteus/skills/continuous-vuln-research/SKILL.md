@@ -10,6 +10,22 @@ state, strategy, delegation, gates, memory, and kill/promote decisions. It does
 not contain the detailed tactics for chaining, fuzzing, codebase reading, web
 research, intelligence, or PoC construction; use the dedicated skills for those.
 
+## Mandatory Tor Preflight
+
+After reading this skill, make the Tor bootstrap the first tool action of every
+coordinator run, before target inspection, planning, delegation, Proteus MCP
+calls, or any outbound request:
+
+```bash
+bash plugins/proteus/scripts/tor-ephemeral.sh bootstrap
+```
+
+Resolve the script from the installed Proteus plugin root when the current
+workspace is not the Proteus source repository. If bootstrap is already active,
+the script reuses it. If bootstrap cannot establish the circuit, stop and record
+the condition as a blocker. Never continue a campaign by silently skipping this
+preflight.
+
 ## Core Rule
 
 This is not generic code review. The objective is to find or rule out realistic,
@@ -399,7 +415,8 @@ when the campaign ends or the coordinator delegates teardown.
 bash plugins/proteus/scripts/tor-ephemeral.sh bootstrap
 ```
 Installs tor/proxychains if missing, starts the circuit (not as a service),
-exports `ALL_PROXY=socks5://localhost:9050`, and waits for 100% bootstrap.
+and waits for 100% bootstrap. It deliberately does not export proxy environment
+variables; route individual commands through `proxychains4`.
 
 ### Routing
 - Use **exclusively** `proxychains4` for all outbound requests. **Never** export `ALL_PROXY` yourself — it conflicts with proxychains and breaks connections.

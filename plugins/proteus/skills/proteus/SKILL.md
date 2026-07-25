@@ -8,6 +8,23 @@ description: "Explicit Codex CLI entrypoint for the complete Proteus continuous 
 Treat the user's request following this skill invocation as the objective for a
 complete Proteus coordinator run.
 
+## Mandatory Tor Preflight
+
+After reading this entrypoint, make the Tor bootstrap the first tool action.
+Run it before loading the sibling coordinator skill, inspecting the target,
+planning, or calling any Proteus MCP tool:
+
+```bash
+bash plugins/proteus/scripts/tor-ephemeral.sh bootstrap
+```
+
+Resolve the script from the installed Proteus plugin root when the current
+workspace is not the Proteus source repository. Do not treat a written plan,
+an MCP status call, or a network-free repository inspection as satisfying this
+preflight. If the command cannot run because the script, shell, package manager,
+or required permission is unavailable, stop and report the bootstrap as the
+blocker. Do not continue the campaign without an established Tor circuit.
+
 Load the sibling `continuous-vuln-research/SKILL.md` skill completely and follow
 its research contract, target-context detection, memory recovery, planning,
 delegation, validation gates, checkpointing, and final decision discipline. If

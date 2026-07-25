@@ -15,12 +15,22 @@ const pluginRoot = path.resolve(repoRoot, String(codexEntry.source?.path ?? code
 const codexManifest = readJson(path.join(pluginRoot, ".codex-plugin", "plugin.json"));
 assert(codexManifest.name === "proteus", "Codex plugin name must be proteus");
 assertFile(path.resolve(pluginRoot, codexManifest.skills));
-const codexMcpConfigPath = path.resolve(pluginRoot, codexManifest.mcpServers);
-assertFile(codexMcpConfigPath);
-const codexMcpConfig = readJson(codexMcpConfigPath);
-assert(codexMcpConfig.mcpServers?.proteus?.cwd === ".", "Codex plugin MCP must resolve relative paths from the plugin root");
+const codexMcpServer = codexManifest.mcpServers?.proteus;
+assert(codexMcpServer?.cwd === ".", "Codex plugin MCP must resolve relative paths from the plugin root");
+const codexMcpArgs = codexMcpServer?.args;
+assert(Array.isArray(codexMcpArgs), "Codex plugin MCP config is missing proteus args");
+assert(!codexMcpArgs.join(" ").includes("${CLAUDE_PLUGIN_ROOT}"), "Codex plugin MCP args must not rely on host interpolation");
+assert(codexMcpArgs.join(" ") === "scripts/proteus-mcp.cjs", "Codex plugin MCP must launch the plugin-relative wrapper");
 assertSkill(path.join(pluginRoot, "skills", "proteus", "SKILL.md"), "proteus");
 assertSkill(path.join(pluginRoot, "skills", "continuous-vuln-research", "SKILL.md"), "continuous-vuln-research");
+const torPreflightMarker = "## Mandatory Tor Preflight";
+const torBootstrapCommand = "bash plugins/proteus/scripts/tor-ephemeral.sh bootstrap";
+const codexEntrypoint = fs.readFileSync(path.join(pluginRoot, "skills", "proteus", "SKILL.md"), "utf8");
+const coordinatorSkill = fs.readFileSync(path.join(pluginRoot, "skills", "continuous-vuln-research", "SKILL.md"), "utf8");
+assert(codexEntrypoint.includes(torPreflightMarker), "Codex Proteus entrypoint is missing the mandatory Tor preflight");
+assert(codexEntrypoint.includes(torBootstrapCommand), "Codex Proteus entrypoint is missing the Tor bootstrap command");
+assert(coordinatorSkill.includes(torPreflightMarker), "Coordinator skill is missing the mandatory Tor preflight");
+assert(coordinatorSkill.includes(torBootstrapCommand), "Coordinator skill is missing the Tor bootstrap command");
 const roleFiles = fs.readdirSync(path.join(pluginRoot, "agents")).filter((name) => name.startsWith("proteus-") && name.endsWith(".md")).sort();
 const codexAgentFiles = fs.readdirSync(path.join(repoRoot, ".codex", "agents")).filter((name) => name.endsWith(".toml")).sort();
 const expectedRoleFiles = [
@@ -31,6 +41,7 @@ const expectedRoleFiles = [
   "proteus-generalist.md",
   "proteus-libris.md",
   "proteus-loom.md",
+  "proteus-maverick.md",
   "proteus-mimic.md",
   "proteus-skeptic.md"
 ].sort();
@@ -56,12 +67,23 @@ const claudeEntry = claudeMarketplace.plugins?.find((entry) => entry.name === "p
 assert(claudeEntry, "Claude marketplace is missing the Proteus entry");
 assertFile(path.join(pluginRoot, ".claude-plugin", "plugin.json"));
 assertFile(path.join(pluginRoot, "commands", "proteus.md"));
+const claudeMcpConfig = readJson(path.join(pluginRoot, ".mcp.json"));
+assert(
+  claudeMcpConfig.mcpServers?.proteus?.args?.includes("${CLAUDE_PLUGIN_ROOT}/scripts/proteus-mcp.cjs"),
+  "Claude Code MCP config must use CLAUDE_PLUGIN_ROOT"
+);
+const canonicalCommand = fs.readFileSync(path.join(pluginRoot, "commands", "proteus.md"), "utf8");
+assert(canonicalCommand.includes("CRITICAL MANDATORY FIRST STEP"), "Proteus command is missing the mandatory Tor-first rule");
 
 const openCodeConfig = readJson(path.join(repoRoot, "opencode.json"));
 assert(openCodeConfig.mcp?.proteus?.enabled, "OpenCode MCP proteus config is missing");
 assert(openCodeConfig.instructions?.includes(".opencode/instructions/proteus.md"), "OpenCode instruction path is missing");
 assertFile(path.join(repoRoot, ".opencode", "skills", "proteus", "SKILL.md"));
 assertFile(path.join(repoRoot, ".opencode", "skills", "proteus-mobile-reversing", "scripts", "extract_mobile_artifacts.py"));
+const openCodeCommand = fs.readFileSync(path.join(repoRoot, ".opencode", "commands", "proteus.md"), "utf8");
+const openCodeSkill = fs.readFileSync(path.join(repoRoot, ".opencode", "skills", "proteus", "SKILL.md"), "utf8");
+assert(openCodeCommand === canonicalCommand, "Generated OpenCode /proteus command is stale");
+assert(openCodeSkill.includes(torPreflightMarker), "Generated OpenCode Proteus skill is missing the mandatory Tor preflight");
 const openCodeAgents = fs.readdirSync(path.join(repoRoot, ".opencode", "agents")).filter((name) => name.startsWith("proteus-") && name.endsWith(".md"));
 assert(openCodeAgents.length === roleFiles.length, "OpenCode agent count does not match canonical role contracts");
 

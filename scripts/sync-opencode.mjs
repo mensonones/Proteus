@@ -25,6 +25,7 @@ const skillMap = [
 
 syncDirectory(path.join(pluginRoot, "agents"), path.join(openCodeRoot, "agents"));
 syncDirectory(path.join(pluginRoot, "templates"), path.join(openCodeRoot, "templates"));
+syncCommand();
 syncSkills();
 
 function syncDirectory(source, destination) {
@@ -34,6 +35,16 @@ function syncDirectory(source, destination) {
   fs.rmSync(destination, { recursive: true, force: true });
   fs.mkdirSync(path.dirname(destination), { recursive: true });
   fs.cpSync(source, destination, { recursive: true });
+}
+
+function syncCommand() {
+  const source = path.join(pluginRoot, "commands", "proteus.md");
+  const destination = path.join(openCodeRoot, "commands", "proteus.md");
+  if (!fs.existsSync(source)) {
+    throw new Error(`missing source command: ${source}`);
+  }
+  fs.mkdirSync(path.dirname(destination), { recursive: true });
+  fs.copyFileSync(source, destination);
 }
 
 function syncSkills() {

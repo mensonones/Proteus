@@ -12,6 +12,7 @@ const roleSettings = {
   "proteus-loom": { sandbox: "read-only", reasoning: "high", nicknames: ["Loom"] },
   "proteus-chaos": { sandbox: "workspace-write", reasoning: "high", nicknames: ["Chaos"] },
   "proteus-libris": { sandbox: "read-only", reasoning: "medium", nicknames: ["Libris"] },
+  "proteus-maverick": { sandbox: "read-only", reasoning: "high", nicknames: ["Maverick"] },
   "proteus-mimic": { sandbox: "workspace-write", reasoning: "high", nicknames: ["Mimic"] },
   "proteus-artificer": { sandbox: "workspace-write", reasoning: "high", nicknames: ["Artificer"] },
   "proteus-skeptic": { sandbox: "read-only", reasoning: "high", nicknames: ["Skeptic"] },

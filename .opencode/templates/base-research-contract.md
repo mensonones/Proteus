@@ -41,12 +41,13 @@ Every Proteus role and skill must continuously follow this contract.
 
 ## Network Operations
 
-Tor must be ephemeral — installed on demand, used during the round, and
-removed when the campaign ends or the coordinator delegates teardown.
+Tor must be ephemeral — installed on demand, bootstrapped as the coordinator's
+first tool action, used during the round, and removed when the campaign ends or
+the coordinator delegates teardown.
 
 ### Lifecycle
 
-*Bootstrap (before first outbound request):*
+*Bootstrap (first coordinator tool action, before inspection or MCP calls):*
 ```bash
 bash plugins/proteus/scripts/tor-ephemeral.sh bootstrap
 ```

@@ -58,8 +58,8 @@ assertFile(path.join(pluginRoot, ".claude-plugin", "plugin.json"));
 assertFile(path.join(pluginRoot, "commands", "proteus.md"));
 
 const openCodeConfig = readJson(path.join(repoRoot, "opencode.json"));
-assert(openCodeConfig.command?.proteus, "OpenCode /proteus command is missing");
-assert(openCodeConfig.skills?.paths?.includes(".opencode/skills"), "OpenCode skill path is missing");
+assert(openCodeConfig.mcp?.proteus?.enabled, "OpenCode MCP proteus config is missing");
+assert(openCodeConfig.instructions?.includes(".opencode/instructions/proteus.md"), "OpenCode instruction path is missing");
 assertFile(path.join(repoRoot, ".opencode", "skills", "proteus", "SKILL.md"));
 assertFile(path.join(repoRoot, ".opencode", "skills", "proteus-mobile-reversing", "scripts", "extract_mobile_artifacts.py"));
 const openCodeAgents = fs.readdirSync(path.join(repoRoot, ".opencode", "agents")).filter((name) => name.startsWith("proteus-") && name.endsWith(".md"));

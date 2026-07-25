@@ -4,7 +4,8 @@
       "command": "node",
       "args": [
         "${CLAUDE_PLUGIN_ROOT}/scripts/proteus-mcp.cjs"
-      ]
+      ],
+      "cwd": "."
     }
   }
 }

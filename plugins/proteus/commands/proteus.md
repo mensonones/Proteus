@@ -84,6 +84,67 @@ superseded --keep-latest`, then inspect the remaining planned round.
 Record global reusable lessons with `proteus learn add` only when they are not
 target-specific vulnerability claims.
 
+## Network and Anonymization (Ephemeral Tor)
+
+Tor must be ephemeral: installed on demand, used during the round, and removed
+when the campaign ends or the coordinator delegates teardown.
+
+### Bootstrap
+```bash
+bash plugins/proteus/scripts/tor-ephemeral.sh bootstrap
+```
+Installs tor/proxychains if missing, starts the circuit (not as a service),
+exports `ALL_PROXY=socks5://localhost:9050`, and waits for 100% bootstrap.
+
+### Routing
+- Use **exclusively** `proxychains4` for all outbound requests. **Never** export `ALL_PROXY` yourself — it conflicts with proxychains and breaks connections.
+- **FORBIDDEN to use `webfetch` or host built-in fetch tools.** They bypass the OS and do not pass through Tor. All HTTP/HTTPS requests must be made via bash: `proxychains4 curl`, `proxychains4 wget`, etc.
+- Verify circuit: `proxychains4 curl -s https://check.torproject.org/api/ip`
+
+### Enforcement (optional, recommended)
+```bash
+sudo bash plugins/proteus/scripts/tor-ephemeral.sh enforce
+```
+Applies iptables rules dropping all outbound TCP not passing through Tor at the kernel level. Blocks host webfetch too.
+```bash
+sudo bash plugins/proteus/scripts/tor-ephemeral.sh relax
+```
+Removes the rules. Use before rebuilding circuits or during scrub.
+
+### Teardown (mandatory in every scrub)
+```bash
+bash plugins/proteus/scripts/tor-ephemeral.sh stop
+```
+Kills process, deletes `/tmp/tor-ephemeral`, removes iptables, unsets env vars.
+
+### Full Purge (end of campaign)
+```bash
+bash plugins/proteus/scripts/tor-ephemeral.sh purge
+```
+stop + apt-get purge tor proxychains4 (removes from system).
+
+If the script is not accessible, follow the inline flow in the base-research-contract.
+If Tor is blocked, record it as a blocker.
+
+## Operational Hygiene (Trace Cleanup)
+
+Before every return or handoff, all agents must actively clean up traces:
+
+1. Delete temporary files, scripts, build artifacts, and extracted directories.
+2. Remove downloads, expanded APK/IPA, Docker images, and temporary clones.
+3. Delete proxy captures (`*.har`, `*.pcap`, mitmproxy) after analysis.
+4. Unset environment variables with credentials, tokens, and keys.
+5. Prefix sensitive commands with a space to avoid shell history logging.
+6. Remove any file written outside `.vros/` (reports, labs, logs).
+7. Confirm no proxy env vars (`ALL_PROXY`, `HTTP_PROXY`, `HTTPS_PROXY`) remain set.
+8. **Kill Tor process and delete `/tmp/tor-ephemeral`.** Use the script:
+   `bash plugins/proteus/scripts/tor-ephemeral.sh stop`. At the end of the campaign:
+   `bash plugins/proteus/scripts/tor-ephemeral.sh purge` (removes packages too).
+
+Keep research artifacts only inside `.vros/`. Never commit research output to
+public repositories. Agents failing to scrub before returning are non-compliant
+and must record the deviation.
+
 ## Host Subagents
 
 When Claude Code, Codex, or another host can launch subagents, delegate bounded

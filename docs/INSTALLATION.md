@@ -1,11 +1,12 @@
 # Proteus Installation
 
-Proteus has four install surfaces:
+Proteus has three install surfaces:
 
 - CLI/runtime: the `proteus` and `proteus-mcp` commands.
 - Codex plugin: installed through a Codex plugin marketplace.
-- Claude Code plugin: `/proteus`, plugin subagents, and MCP config.
-- Opencode integration: `/proteus` command, skills, subagents, and MCP config.
+- Claude Code plugin: `/proteus:proteus`, plugin subagents, and MCP config.
+- OpenCode project support: `/proteus`, project skills, specialist agents,
+  templates, and MCP config.
 
 Install the CLI first. The plugin instructions can load without it, but target
 memory, exports, labs, and MCP tools depend on the `proteus` and `proteus-mcp`
@@ -14,14 +15,14 @@ runtime commands.
 ## 1. CLI Install From GitHub
 
 ```powershell
-npm install -g https://codeload.github.com/rafabd1/Proteus/tar.gz/refs/heads/main
+npm install -g https://codeload.github.com/Vyntra-Research/Proteus/tar.gz/refs/heads/main
 proteus --version
 ```
 
 Expected shape:
 
 ```text
-@rafabd1/proteus 1.0.1
+@rafabd1/proteus 2.1.4
 ```
 
 The GitHub tarball install uses the committed `dist/` runtime and has no
@@ -38,7 +39,7 @@ proteus --version
 ## CLI Upgrade
 
 ```powershell
-npm install -g https://codeload.github.com/rafabd1/Proteus/tar.gz/refs/heads/main
+npm install -g https://codeload.github.com/Vyntra-Research/Proteus/tar.gz/refs/heads/main
 ```
 
 After npm publishing:
@@ -50,29 +51,18 @@ npm update -g @rafabd1/proteus
 Pin a branch, tag, or commit:
 
 ```powershell
-npm install -g github:rafabd1/Proteus#main
+npm install -g github:Vyntra-Research/Proteus#main
 ```
 
 ## Local Development Install
 
 ```powershell
-git clone https://github.com/rafabd1/Proteus
+git clone https://github.com/Vyntra-Research/Proteus
 cd Proteus
 npm install
 npm link
 proteus --version
 ```
-
-To install the standalone maintainability review skill globally for Codex,
-Claude Code, and Opencode from this clone:
-
-```powershell
-npm run install:maintainability-review
-```
-
-The installer creates symlinks from the versioned skill at
-`plugins/proteus/skills/maintainability-review` into the user-level skill
-directories used by those tools.
 
 ## 2. Codex Plugin Install
 
@@ -80,14 +70,13 @@ Codex supports marketplace sources in the form `owner/repo[@ref]`, Git URLs,
 SSH URLs, or local marketplace root directories.
 
 ```powershell
-codex plugin marketplace add rafabd1/Proteus
-codex plugin add proteus@proteus-marketplace
+codex plugin marketplace add Vyntra-Research/Proteus
 ```
 
 Pin a ref:
 
 ```powershell
-codex plugin marketplace add rafabd1/Proteus@main
+codex plugin marketplace add Vyntra-Research/Proteus@main
 ```
 
 The marketplace file is:
@@ -102,107 +91,74 @@ It exposes the plugin at:
 plugins/proteus
 ```
 
-Start a new Codex CLI session after installation. The installed plugin bundles
-its MCP configuration. Register `proteus-mcp` separately only when intentionally
-using the standalone runtime without the plugin.
-
-Install the native Proteus custom-agent profiles globally and start a new Codex
-session again:
+Then register the MCP server from the CLI install:
 
 ```powershell
-proteus-install-codex-agents
+codex mcp add proteus -- proteus-mcp
 ```
 
-This installs Atlas, Argus, Loom, Chaos, Libris, Mimic, Artificer, Skeptic, and Cicada
-under `~/.codex/agents/`. The coordinator falls back to generic subagents with
-inlined role contracts when these profiles are not installed.
-
-In Codex CLI, verify the skill with `/skills`, then invoke:
+In Codex, invoke the plugin with `@proteus`, for example:
 
 ```text
-$proteus initialize continuous vulnerability research for this repository
+@proteus initialize continuous vulnerability research for this repository
 ```
 
-Use `$proteus` as the normal CLI entrypoint so Codex can load the full
-coordinator and choose any specialist skill it needs. `@Proteus` is the plugin
-mention on supported ChatGPT desktop surfaces, not Codex CLI syntax.
+Use `@proteus` as the normal entrypoint so Codex can load the plugin and choose
+the main coordinator skill plus any specialist skill it needs. Slash-style skill
+mentions are for explicitly targeting a single skill and are less ergonomic now
+that Proteus ships multiple skills.
 
 ## 3. Claude Code Plugin Install
+
+Claude Code support is experimental and has not been exhaustively tested yet.
+Because Proteus is heavily focused on offensive security research, Claude
+models may also apply safety restrictions that affect exploit-development,
+chaining, or other offsec workflows.
 
 Install directly inside Claude Code:
 
 ```text
-/plugin marketplace add rafabd1/Proteus
+/plugin marketplace add Vyntra-Research/Proteus
 /plugin install proteus@proteus-marketplace
 ```
 
-Then use `/proteus` from Claude Code.
+Then use `/proteus:proteus` from Claude Code.
 
-Then register the MCP server from the CLI install:
+The plugin starts its bundled Proteus MCP server automatically. If a host does
+not load plugin-provided MCP servers, register the CLI runtime as a manual
+fallback:
 
 ```powershell
 claude mcp add -s user proteus -- proteus-mcp
 ```
 
-## 4. Opencode Integration
+## OpenCode Project Support
 
-The `opencode.json` at the project root configures Proteus for Opencode with
-the `/proteus` command, skills from `.opencode/skills/`, subagents from
-`.opencode/agents/`, support templates from `.opencode/templates/`, and the MCP
-server.
+Install and configure OpenCode from the official project:
 
-Two options:
+- OpenCode repository: <https://github.com/anomalyco/opencode>
+- OpenCode docs: <https://opencode.ai/docs/>
 
-### Local (per-project)
-
-Copy into your Opencode workspace:
+Then install Proteus support in each workspace where OpenCode should load it:
 
 ```powershell
-cp /path/to/Proteus/opencode.json opencode.json
-cp -r /path/to/Proteus/.opencode .
+proteus opencode install --root C:\path\to\target
+proteus opencode doctor --root C:\path\to\target
 ```
 
-Or if Proteus is already in the workspace (e.g. cloned as a subdirectory),
-Opencode picks up the `opencode.json`, skills, agents, and templates
-automatically.
+This writes project-local OpenCode files:
 
-### Global (all projects)
+- `opencode.json` with a local MCP server named `proteus` that runs
+  `proteus-mcp`;
+- `.opencode/commands/proteus.md` for `/proteus`;
+- `.opencode/skills/proteus*/` for coordinator and specialist skills;
+- `.opencode/agents/proteus-*.md` for specialist subagents;
+- `.opencode/templates/` with the packaged Proteus templates.
 
-Copy skills, agents, and templates to the global Opencode config directory:
-
-```powershell
-cp -r /path/to/Proteus/.opencode/skills ~/.config/opencode/skills
-cp -r /path/to/Proteus/.opencode/agents ~/.config/opencode/agents
-cp -r /path/to/Proteus/.opencode/templates ~/.config/opencode/templates
-```
-
-Add the `/proteus` command and MCP server to `~/.config/opencode/opencode.json`:
-
-```json
-{
-  "skills": { "paths": ["~/.config/opencode/skills"] },
-  "command": {
-    "proteus": {
-      "description": "Inicia pesquisa contínua de vulnerabilidades com memória estruturada.",
-      "template": "Atue como coordenador Proteus..."
-    }
-  },
-  "mcp": {
-    "proteus": {
-      "type": "local",
-      "command": ["proteus-mcp"],
-      "enabled": true
-    }
-  }
-}
-```
-
-Restart Opencode after making config changes.
-
-In Opencode, invoke Proteus with `/proteus`. Opencode loads the coordinator
-template from the command definition, the skills from `.opencode/skills/`, the
-subagent contracts from `.opencode/agents/`, and support templates from
-`.opencode/templates/`.
+It does not initialize Proteus target memory or modify an existing
+`.vros/memory.sqlite` base. Use `/proteus` inside OpenCode to start the
+coordinator workflow. Use `--force` only when you want to refresh existing
+generated OpenCode files.
 
 ## Verify Runtime
 
@@ -212,48 +168,43 @@ proteus roles
 proteus --help
 ```
 
+Use the repository/workspace root as the normal Proteus `--root`. If a memory
+base is accidentally created in a nested folder, merge it into the intended
+root before continuing:
+
+```powershell
+proteus merge --root C:\path\to\workspace --source .\packages\foo\.vros\memory.sqlite --dry-run
+proteus merge --root C:\path\to\workspace --source .\packages\foo\.vros\memory.sqlite
+```
+
 ## Verify MCP
 
 ```powershell
 proteus-mcp
 ```
 
-For Codex, use `codex mcp add proteus -- proteus-mcp`. For Claude Code, use
-`claude mcp add -s user proteus -- proteus-mcp`. For Opencode, the MCP server
-is declared in `opencode.json`. Plugin hosts that support
-plugin-declared MCP servers can also use `plugins/proteus/.mcp.json`. The
+For Codex, use `codex mcp add proteus -- proteus-mcp`. The Claude Code plugin
+loads `plugins/proteus/.mcp.json` automatically; use
+`claude mcp add -s user proteus -- proteus-mcp` only as a manual fallback. The
 wrapper builds the runtime if `dist/` is not present yet.
 
-## Ephemeral Tor (Network Anonymization)
+## Optional Chimera Runtime
 
-Proteus agents route all outbound research traffic through Tor. The
-`plugins/proteus/scripts/tor-ephemeral.sh` script manages the lifecycle:
+Chimera mode uses OpenCode for secondary agents. Normal Proteus usage does not
+require OpenCode. Install and configure OpenCode from the official project, then
+enable Chimera for a target:
 
-```bash
-bash plugins/proteus/scripts/tor-ephemeral.sh bootstrap   # install + start circuit
-bash plugins/proteus/scripts/tor-ephemeral.sh stop        # kill + clean temp dir
-bash plugins/proteus/scripts/tor-ephemeral.sh purge       # stop + uninstall packages
+- OpenCode repository: <https://github.com/anomalyco/opencode>
+- OpenCode docs: <https://opencode.ai/docs/>
+
+```powershell
+proteus chimera config init --opencode-command opencode --model zai/glm-5.2 --variant high
+proteus chimera doctor --root C:\path\to\target
 ```
 
-The bootstrap command auto-detects the package manager (apt/dnf/pacman/brew),
-installs `tor` and `proxychains4` if missing, and starts an ephemeral circuit
-on `127.0.0.1:9050`. No systemd service is created or left running.
-
-Optional kernel-level enforcement blocks all non-Tor traffic, including the
-host's built-in `webfetch` tool:
-
-```bash
-sudo bash plugins/proteus/scripts/tor-ephemeral.sh enforce
-sudo bash plugins/proteus/scripts/tor-ephemeral.sh relax
-```
-
-Requires: a package manager with `sudo` access for installation, and `iptables`
-for kernel enforcement. The script handles the absence of both gracefully
-(records the limitation as a blocker).
-
-When running Proteus locally (`npm link`), the script is available at
-`plugins/proteus/scripts/tor-ephemeral.sh`. When installed globally via npm,
-access it from the cloned repository or copy it to your target workspace.
+Chimera config is global for the current user. Workspace commands still use
+`--root`. Runs have no default timeout; pass `--timeout N` only for deliberate
+smoke tests or short probes.
 
 ## Uninstall CLI
 

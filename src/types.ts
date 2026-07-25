@@ -7,7 +7,7 @@ export type JsonValue =
   | { [key: string]: JsonValue };
 
 export type AgentCodename =
-  | "atlas"
+  | "generalist"
   | "argus"
   | "loom"
   | "chaos"
@@ -25,13 +25,6 @@ export type SurfaceStatus =
   | "low_roi"
   | "blocked"
   | "watch";
-
-export type DeltaStatus =
-  | "new"
-  | "regression"
-  | "persistent"
-  | "change"
-  | "untracked";
 
 export type HypothesisStatus =
   | "live"
@@ -69,6 +62,59 @@ export type BranchStatus =
   | "killed"
   | "promoted"
   | "blocked";
+
+export type ChimeraRole =
+  | "generalist"
+  | "explorer"
+  | "codebase-research"
+  | "chaining"
+  | "fuzzing"
+  | "web-intel"
+  | "web-research"
+  | "poc-exploit"
+  | "cicada"
+  | "custom";
+
+export type ChimeraStatus =
+  | "starting"
+  | "running"
+  | "stopped";
+
+export type ChimeraAccessMode =
+  | "explorer"
+  | "editor";
+
+export type ChimeraMessageDirection =
+  | "coordinator_to_agent"
+  | "agent_to_coordinator"
+  | "system";
+
+export type ChimeraMessageKind =
+  | "message"
+  | "redirect"
+  | "finding"
+  | "blocker"
+  | "snapshot"
+  | "heartbeat"
+  | "council"
+  | "kill"
+  | "close"
+  | "error";
+
+export interface ChimeraConfig {
+  enabled: boolean;
+  runtime: "opencode";
+  opencodeCommand: string;
+  opencodeServerUrl: string | null;
+  opencodeServerPid: number | null;
+  defaultModel: string | null;
+  defaultVariant: string | null;
+  defaultAgent: string | null;
+  maxAgents: number;
+  defaultTimeoutSec: number;
+  defaultNetwork: boolean;
+  skipPermissions: boolean;
+}
 
 export interface TargetContract {
   target: string;
@@ -121,7 +167,6 @@ export interface HypothesisInput {
   impactClaim: string;
   heuristicFamily: string;
   status: HypothesisStatus;
-  deltaStatus?: DeltaStatus;
   score: number;
   duplicateRisk: number;
   expectedBehaviorRisk: number;

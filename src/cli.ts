@@ -1,17 +1,49 @@
 #!/usr/bin/env node
 import fs from "node:fs";
 import path from "node:path";
-import { ProteusDb, createDefaultContract } from "./db";
+import { ProteusDb, createDefaultContract, type ChimeraSessionRow } from "./db";
 import { exportMarkdown } from "./exporter";
 import { ingestPaths } from "./ingest";
 import { createLab } from "./lab";
+import {
+  broadcastChimeraMessage,
+  chimeraDoctor,
+  closeChimeraSession,
+  closeChimeraCouncil,
+  getChimeraConfig,
+  getChimeraCouncil,
+  heartbeatChimeraSession,
+  initChimeraConfig,
+  killChimeraSession,
+  listChimeraSessionView,
+  acceptChimeraCouncil,
+  attachOpenCodeSession,
+  cueChimeraCouncilTurn,
+  openChimeraCouncilRound,
+  pollChimeraMessages,
+  postChimeraCouncilTurn,
+  postChimeraMessage,
+  recoverChimeraSession,
+  runChimeraSession,
+  saveChimeraConfig,
+  sendChimeraMessage,
+  snapshotChimeraSession,
+  snapshotChimeraWorkflow,
+  startChimeraSession,
+  startChimeraCouncil,
+  startChimeraSwarm,
+  stopOpenCodeServer,
+  wakeChimeraSession,
+  type ChimeraSwarmPlan
+} from "./chimera";
 import { defaultGlobalScopeFromTarget, GlobalMemoryDb, globalMemoryLocation } from "./global-memory";
 import { observeTarget } from "./observe";
+import { doctorOpenCodeSupport, installOpenCodeSupport } from "./opencode";
 import { planRound, renderRoundPlan } from "./planner";
 import { renderAgentPrompt } from "./prompts";
-import { ROLE_ORDER, ROLES } from "./roles";
+import { ROLE_ORDER, ROLES, normalizeAgentCodename, validRoleList } from "./roles";
 import { ensureDir, exportsDir, resolveTargetRoot } from "./paths";
-import type { AgentCodename, BranchStatus, CampaignStatus, HypothesisInput, JsonValue, RoiFactors, RoundStatus, SurfaceStatus } from "./types";
+import type { AgentCodename, BranchStatus, CampaignStatus, ChimeraAccessMode, ChimeraMessageKind, ChimeraStatus, HypothesisInput, JsonValue, RoiFactors, RoundStatus, SurfaceStatus } from "./types";
 
 interface ParsedArgs {
   command: string[];
@@ -34,9 +66,23 @@ function main(): void {
     return;
   }
 
+  if (command === "chimera" && subcommand === "config") {
+    cmdChimeraConfig(parsed.command[2], parsed);
+    return;
+  }
+  if (command === "chimera" && subcommand === "stop-server") {
+    console.log(JSON.stringify({ ok: true, ...stopOpenCodeServer() }, null, 2));
+    return;
+  }
+  if (command === "opencode") {
+    cmdOpenCode(subcommand, parsed);
+    return;
+  }
+
   const targetRoot = resolveTargetRoot(getString(parsed, "root") ?? process.cwd());
   const db = new ProteusDb(targetRoot);
   try {
+    guardChimeraProtectedCommands(db, command, subcommand, parsed);
     switch (command) {
       case "init":
         cmdInit(db, parsed);
@@ -46,6 +92,12 @@ function main(): void {
         break;
       case "migrate":
         cmdMigrate(db);
+        break;
+      case "merge":
+        cmdMerge(db, parsed);
+        break;
+      case "chimera":
+        cmdChimera(db, subcommand, parsed);
         break;
       case "ingest":
         cmdIngest(db, parsed.command.slice(1));
@@ -166,6 +218,308 @@ function cmdMigrate(db: ProteusDb): void {
   }
 }
 
+function cmdMerge(db: ProteusDb, parsed: ParsedArgs): void {
+  requireInitialized(db);
+  const sources = [
+    ...splitList(getString(parsed, "sources") ?? ""),
+    ...splitList(getString(parsed, "source") ?? ""),
+    ...parsed.command.slice(1)
+  ];
+  const result = db.mergeMemoryBases(sources, { dryRun: getBoolean(parsed, "dry-run"), sourceBaseRoot: process.cwd() });
+  console.log(JSON.stringify(result, null, 2));
+}
+
+function cmdOpenCode(subcommand: string | undefined, parsed: ParsedArgs): void {
+  const root = resolveTargetRoot(getString(parsed, "root") ?? process.cwd());
+  switch (subcommand) {
+    case "install":
+      console.log(JSON.stringify({ ok: true, ...installOpenCodeSupport(root, { force: getBoolean(parsed, "force") }) }, null, 2));
+      return;
+    case "doctor":
+      console.log(JSON.stringify(doctorOpenCodeSupport(root), null, 2));
+      return;
+    default:
+      throw new Error("Usage: proteus opencode install|doctor [--root <path>] [--force]");
+  }
+}
+
+function cmdChimera(db: ProteusDb, subcommand: string | undefined, parsed: ParsedArgs): void {
+  switch (subcommand) {
+    case "config":
+      cmdChimeraConfig(parsed.command[2], parsed);
+      return;
+    case "doctor":
+      console.log(JSON.stringify(chimeraDoctor(db), null, 2));
+      return;
+    case "stop-server":
+      console.log(JSON.stringify({ ok: true, ...stopOpenCodeServer() }, null, 2));
+      return;
+    case "start":
+      console.log(JSON.stringify(startChimeraSession(db, {
+        role: requiredString(parsed, "role"),
+        goal: requiredString(parsed, "goal"),
+        accessMode: chimeraAccessMode(parsed),
+        accessNotes: getString(parsed, "access-notes"),
+        campaignId: getNumber(parsed, "campaign-id"),
+        roundId: getNumber(parsed, "round-id"),
+        model: getString(parsed, "model"),
+        provider: getString(parsed, "provider"),
+        variant: getString(parsed, "variant"),
+        timeoutSec: getNumber(parsed, "timeout"),
+        run: getBoolean(parsed, "run")
+      }), null, 2));
+      return;
+    case "swarm": {
+      const planPath = requiredString(parsed, "plan");
+      const plan = JSON.parse(fs.readFileSync(path.resolve(db.targetRoot, planPath), "utf8")) as ChimeraSwarmPlan;
+      console.log(JSON.stringify(startChimeraSwarm(db, { ...plan, run: getBoolean(parsed, "run") || plan.run }), null, 2));
+      return;
+    }
+    case "council":
+      cmdChimeraCouncil(db, parsed.command[2], parsed);
+      return;
+    case "send":
+      console.log(JSON.stringify({ ok: true, ...sendChimeraOutbound(db, parsed) }, null, 2));
+      return;
+    case "post":
+      console.log(JSON.stringify({
+        ok: true,
+        message: postChimeraMessage(
+          db,
+          currentChimeraSessionId(db, parsed, "id"),
+          chimeraMessageKind(parsed, "kind", "message"),
+          requiredString(parsed, "body"),
+          parseJsonFlag(getString(parsed, "metadata"))
+        )
+      }, null, 2));
+      return;
+    case "snapshot": {
+      const body = getString(parsed, "body");
+      if (body !== undefined) {
+        console.log(JSON.stringify({
+          ok: true,
+          mode: "write",
+          message: snapshotChimeraSession(db, currentChimeraSessionId(db, parsed, "id"), body)
+        }, null, 2));
+        return;
+      }
+      console.log(JSON.stringify({
+        ok: true,
+        mode: "read",
+        hint: "No --body was supplied, so Proteus returned the latest agent-authored Chimera snapshot state. Use --body only when the Chimera agent is writing its own state summary. Use workflow-snapshot for recent OpenCode transcript messages.",
+        ...pollChimeraMessages(db, {
+          publicId: getString(parsed, "id"),
+          unreadOnly: false,
+          forAgent: false,
+          peek: true,
+          limit: getNumber(parsed, "limit")
+        })
+      }, null, 2));
+      return;
+    }
+    case "workflow-snapshot":
+      console.log(JSON.stringify({
+        ok: true,
+        ...snapshotChimeraWorkflow(db, requiredString(parsed, "id"), {
+          limit: getNumber(parsed, "limit"),
+          maxMessageChars: getNumber(parsed, "max-message-chars")
+        })
+      }, null, 2));
+      return;
+    case "heartbeat":
+      console.log(JSON.stringify(heartbeatChimeraSession(db, currentChimeraSessionId(db, parsed, "id")), null, 2));
+      return;
+    case "run":
+      {
+        const id = requiredString(parsed, "id");
+        const run = runChimeraSession(db, id, getNumber(parsed, "timeout"), {
+          internalRun: getBoolean(parsed, "internal-run"),
+          instruction: getString(parsed, "message") ?? getString(parsed, "instruction")
+        });
+        console.log(JSON.stringify({ ok: true, run, session: db.getChimeraSession(id) }, null, 2));
+      }
+      return;
+    case "wake":
+      {
+        const id = requiredString(parsed, "id");
+        const run = wakeChimeraSession(db, id, {
+          messageId: getNumber(parsed, "message-id"),
+          timeoutSec: getNumber(parsed, "timeout")
+        });
+        console.log(JSON.stringify({ ok: true, run, session: db.getChimeraSession(id) }, null, 2));
+      }
+      return;
+    case "attach-opencode":
+      console.log(JSON.stringify({
+        ok: true,
+        session: attachOpenCodeSession(db, requiredString(parsed, "id"), {
+          serverUrl: requiredString(parsed, "server-url"),
+          opencodeSessionId: requiredString(parsed, "opencode-session-id")
+        })
+      }, null, 2));
+      return;
+    case "poll":
+      console.log(JSON.stringify(pollChimeraMessages(db, {
+        publicId: getString(parsed, "id") ?? (getBoolean(parsed, "agent") ? currentChimeraSessionId(db, parsed, "id") : undefined),
+        unreadOnly: getBoolean(parsed, "unread"),
+        forAgent: getBoolean(parsed, "agent"),
+        peek: getBoolean(parsed, "peek"),
+        limit: getNumber(parsed, "limit")
+      }), null, 2));
+      return;
+    case "broadcast":
+      console.log(JSON.stringify({
+        ok: true,
+        ...broadcastChimeraMessage(db, {
+          body: requiredString(parsed, "message"),
+          kind: chimeraMessageKind(parsed, "kind", "message"),
+          fromId: optionalCurrentChimeraSessionId(db, parsed, "from-id"),
+          priority: getBoolean(parsed, "priority")
+        })
+      }, null, 2));
+      return;
+    case "list":
+      console.log(JSON.stringify(listChimeraSessionView(db, {
+        limit: getNumber(parsed, "limit"),
+        status: getBoolean(parsed, "active") ? "active" : chimeraListStatus(getString(parsed, "status")),
+        all: getBoolean(parsed, "all")
+      }), null, 2));
+      return;
+    case "recover":
+      console.log(JSON.stringify({ ok: true, ...recoverChimeraSession(db, requiredString(parsed, "id")) }, null, 2));
+      return;
+    case "kill":
+      console.log(JSON.stringify(killChimeraSession(db, requiredString(parsed, "id"), requiredString(parsed, "reason")), null, 2));
+      return;
+    case "close":
+      console.log(JSON.stringify(closeChimeraSession(
+        db,
+        requiredString(parsed, "id"),
+        getString(parsed, "verdict") ?? "useful",
+        requiredString(parsed, "summary")
+      ), null, 2));
+      return;
+    default:
+      throw new Error("Usage: proteus chimera <config|doctor|stop-server|start|swarm|council|send|broadcast|post|snapshot|workflow-snapshot|heartbeat|run|wake|attach-opencode|poll|list|recover|kill|close>");
+  }
+}
+
+function sendChimeraOutbound(db: ProteusDb, parsed: ParsedArgs): ReturnType<typeof sendChimeraMessage> {
+  const toId = getString(parsed, "to-id") ?? getString(parsed, "id");
+  const fromId = optionalCurrentChimeraSessionId(db, parsed, "from-id");
+  const body = requiredString(parsed, "message");
+  const kind = chimeraMessageKind(parsed, "kind", "message");
+  const priority = getBoolean(parsed, "priority");
+  if (!toId) {
+    throw new Error("Missing --id or --to-id. Use `chimera post` when a Chimera agent is sending to the coordinator.");
+  }
+  return sendChimeraMessage(db, toId, body, kind, { priority, fromId });
+}
+
+function cmdChimeraCouncil(db: ProteusDb, subcommand: string | undefined, parsed: ParsedArgs): void {
+  switch (subcommand) {
+    case "start":
+      console.log(JSON.stringify(startChimeraCouncil(db, {
+        topic: requiredString(parsed, "topic"),
+        reason: getString(parsed, "reason"),
+        sessionIds: splitList(getString(parsed, "ids") ?? getString(parsed, "sessions") ?? ""),
+        maxRounds: getNumber(parsed, "max-rounds")
+      }), null, 2));
+      return;
+    case "accept":
+      console.log(JSON.stringify({
+        ok: true,
+        message: acceptChimeraCouncil(db, currentChimeraSessionId(db, parsed, "id"), requiredString(parsed, "council-id"), getString(parsed, "body"))
+      }, null, 2));
+      return;
+    case "open-round":
+      console.log(JSON.stringify({
+        ok: true,
+        ...openChimeraCouncilRound(
+          db,
+          requiredString(parsed, "council-id"),
+          getNumber(parsed, "round"),
+          requiredString(parsed, "message"),
+          getString(parsed, "start-id"),
+          !getBoolean(parsed, "no-cue")
+        )
+      }, null, 2));
+      return;
+    case "turn":
+      console.log(JSON.stringify({
+        ok: true,
+        ...postChimeraCouncilTurn(
+          db,
+          currentChimeraSessionId(db, parsed, "id"),
+          requiredString(parsed, "council-id"),
+          requiredString(parsed, "body"),
+          getNumber(parsed, "round"),
+          !getBoolean(parsed, "no-advance")
+        )
+      }, null, 2));
+      return;
+    case "cue-turn":
+      console.log(JSON.stringify({
+        ok: true,
+        ...cueChimeraCouncilTurn(
+          db,
+          requiredString(parsed, "id"),
+          requiredString(parsed, "council-id"),
+          getNumber(parsed, "round"),
+          getString(parsed, "prompt"),
+          getBoolean(parsed, "manual")
+        )
+      }, null, 2));
+      return;
+    case "status":
+      console.log(JSON.stringify(getChimeraCouncil(db, requiredString(parsed, "council-id")), null, 2));
+      return;
+    case "close":
+      console.log(JSON.stringify(closeChimeraCouncil(
+        db,
+        requiredString(parsed, "council-id"),
+        requiredString(parsed, "summary"),
+        getString(parsed, "instruction")
+      ), null, 2));
+      return;
+    default:
+      throw new Error("Usage: proteus chimera council <start|accept|open-round|cue-turn|turn|status|close>");
+  }
+}
+
+function cmdChimeraConfig(subcommand: string | undefined, parsed: ParsedArgs): void {
+  switch (subcommand) {
+    case "init": {
+      const config = initChimeraConfig({
+        enabled: !getBoolean(parsed, "disabled"),
+        runtime: "opencode",
+        opencodeCommand: getString(parsed, "opencode-command"),
+        opencodeServerUrl: getString(parsed, "server-url") ?? undefined,
+        defaultModel: getString(parsed, "model") ?? undefined,
+        defaultVariant: getString(parsed, "variant") ?? getString(parsed, "provider") ?? undefined,
+        defaultAgent: getString(parsed, "agent") ?? undefined,
+        maxAgents: getNumber(parsed, "max-agents"),
+        defaultTimeoutSec: getNumber(parsed, "timeout"),
+        defaultNetwork: hasFlag(parsed, "network") ? getBoolean(parsed, "network") : undefined,
+        skipPermissions: hasFlag(parsed, "no-skip-permissions") ? false : undefined
+      });
+      console.log(JSON.stringify({ ok: true, config }, null, 2));
+      return;
+    }
+    case "show":
+      console.log(JSON.stringify(getChimeraConfig(), null, 2));
+      return;
+    case "disable": {
+      const current = getChimeraConfig();
+      saveChimeraConfig({ ...current, enabled: false });
+      console.log(JSON.stringify({ ok: true, config: getChimeraConfig() }, null, 2));
+      return;
+    }
+    default:
+      throw new Error("Usage: proteus chimera config <init|show|disable>");
+  }
+}
+
 function cmdIngest(db: ProteusDb, inputs: string[]): void {
   requireInitialized(db);
   const result = ingestPaths(db, inputs);
@@ -276,12 +630,16 @@ function cmdCampaign(db: ProteusDb, subcommand: string | undefined, parsed: Pars
 function cmdBranch(db: ProteusDb, subcommand: string | undefined, parsed: ParsedArgs): void {
   requireInitialized(db);
   if (subcommand === "add" || subcommand === "create") {
+    const chimeraSession = currentChimeraSession(db);
     const explicitCampaignId = getNumber(parsed, "campaign-id");
+    if (chimeraSession?.campaignId && explicitCampaignId && explicitCampaignId !== chimeraSession.campaignId) {
+      throw new Error(`Chimera session ${chimeraSession.publicId} is assigned to campaign C${chimeraSession.campaignId}; it cannot record branches under C${explicitCampaignId}.`);
+    }
     const activeCampaigns = db.listCampaigns("active");
-    const activeCampaignId = explicitCampaignId ?? (activeCampaigns.length === 1 ? activeCampaigns[0].id : undefined);
+    const activeCampaignId = chimeraSession?.campaignId ?? explicitCampaignId ?? (activeCampaigns.length === 1 ? activeCampaigns[0].id : undefined);
     const id = db.addHypothesisBranch({
       campaignId: activeCampaignId,
-      roundId: getNumber(parsed, "round-id"),
+      roundId: getNumber(parsed, "round-id") ?? chimeraSession?.roundId ?? undefined,
       surfaceId: getNumber(parsed, "surface-id"),
       title: requiredString(parsed, "title"),
       hypothesis: getString(parsed, "hypothesis") ?? requiredString(parsed, "title"),
@@ -331,15 +689,30 @@ function cmdBranch(db: ProteusDb, subcommand: string | undefined, parsed: Parsed
     return;
   }
 
-  throw new Error("branch requires one of: add, create, list");
+  if (subcommand === "update") {
+    const id = requiredNumber(parsed, "id");
+    const status = branchStatus(parsed);
+    if (!status) throw new Error("branch update requires --status open|testing|killed|promoted|blocked");
+    const updated = db.updateHypothesisBranch({ id, status });
+    console.log(`Updated branch B${updated.id} to ${updated.status}`);
+    return;
+  }
+
+  throw new Error("branch requires one of: add, create, list, update");
 }
 
 function cmdLink(db: ProteusDb, parsed: ParsedArgs): void {
   requireInitialized(db);
+  const fromType = requiredString(parsed, "from-type");
+  const toType = requiredString(parsed, "to-type");
+  const chimeraSession = currentChimeraSession(db);
+  if (chimeraSession && (isCampaignEntityType(fromType) || isCampaignEntityType(toType))) {
+    throw new Error(`Chimera session ${chimeraSession.publicId} cannot manually edit campaign links. Record evidence, hypotheses, branches, gates, decisions, or agent output and Proteus will link them to C${chimeraSession.campaignId ?? "none"} automatically.`);
+  }
   const id = db.addEntityLink({
-    fromType: requiredString(parsed, "from-type"),
+    fromType,
     fromId: requiredNumber(parsed, "from-id"),
-    toType: requiredString(parsed, "to-type"),
+    toType,
     toId: requiredNumber(parsed, "to-id"),
     relation: requiredString(parsed, "relation"),
     confidence: getNumber(parsed, "confidence") ?? 1,
@@ -362,9 +735,9 @@ function cmdRoles(): void {
 }
 
 function cmdPrompt(db: ProteusDb, parsed: ParsedArgs): void {
-  const codename = getString(parsed, "role") as AgentCodename | undefined;
-  if (!codename || !(codename in ROLES)) {
-    throw new Error(`Use --role with one of: ${ROLE_ORDER.join(", ")}`);
+  const codename = normalizeAgentCodename(getString(parsed, "role"));
+  if (!codename) {
+    throw new Error(`Use --role with one of: ${validRoleList()}. Role names are canonical codenames; use --surface for custom labels.`);
   }
   const target = db.getTarget();
   const prompt = renderAgentPrompt({
@@ -407,7 +780,6 @@ function cmdRecord(db: ProteusDb, subcommand: string | undefined, parsed: Parsed
       impactClaim: getString(parsed, "impact") ?? "unknown",
       heuristicFamily: getString(parsed, "heuristic") ?? "unknown",
       status: "live",
-      deltaStatus: (getString(parsed, "delta-status") as never) ?? undefined,
       score: getNumber(parsed, "score") ?? 0,
       duplicateRisk: getNumber(parsed, "duplicate-risk") ?? 5,
       expectedBehaviorRisk: getNumber(parsed, "expected-risk") ?? 5,
@@ -435,16 +807,21 @@ function cmdRecord(db: ProteusDb, subcommand: string | undefined, parsed: Parsed
   }
 
   if (subcommand === "decision") {
+    const entityType = requiredString(parsed, "entity-type");
+    const entityId = requiredNumber(parsed, "entity-id");
+    const decision = requiredString(parsed, "decision");
     const id = db.addDecision({
-      entityType: requiredString(parsed, "entity-type"),
-      entityId: requiredNumber(parsed, "entity-id"),
-      decision: requiredString(parsed, "decision"),
+      entityType,
+      entityId,
+      decision,
       reason: requiredString(parsed, "reason"),
       evidenceIds: splitList(getString(parsed, "evidence-ids") ?? "").map((item) => Number(item)).filter(Boolean),
       actor: getString(parsed, "actor") ?? "coordinator"
     });
+    const updatedBranch = updateBranchStatusFromDecision(db, entityType, entityId, decision);
     autoLinkActiveCampaign(db, "decision", id, "has_decision", `Decision D${id} recorded in active campaign.`);
     console.log(`Recorded decision D${id}`);
+    if (updatedBranch) console.log(`Updated branch B${updatedBranch.id} to ${updatedBranch.status}`);
     return;
   }
 
@@ -464,8 +841,9 @@ function cmdRecord(db: ProteusDb, subcommand: string | undefined, parsed: Parsed
   }
 
   if (subcommand === "agent-output") {
-    const role = requiredString(parsed, "role") as AgentCodename;
-    if (!(role in ROLES)) throw new Error(`Unknown role: ${role}`);
+    const rawRole = requiredString(parsed, "role");
+    const role = normalizeAgentCodename(rawRole);
+    if (!role) throw new Error(`Unknown role: ${rawRole}. Use one of: ${validRoleList()}. For generic triage use --role generalist; put custom names in --surface.`);
     const id = db.addAgentOutput({
       roundId: requiredNumber(parsed, "round-id"),
       codename: role,
@@ -507,16 +885,11 @@ function cmdList(db: ProteusDb, subcommand: string | undefined, parsed: ParsedAr
     return;
   }
 
-    if (subcommand === "hypotheses") {
+  if (subcommand === "hypotheses") {
     const status = getString(parsed, "status");
-    const deltaStatus = getString(parsed, "delta-status");
-    const rows = db
-      .listHypotheses()
-      .filter((row) => !status || row.status === status)
-      .filter((row) => !deltaStatus || row.deltaStatus === deltaStatus)
-      .slice(0, limit);
+    const rows = db.listHypotheses().filter((row) => !status || row.status === status).slice(0, limit);
     for (const row of rows) {
-      console.log(`H${row.id} [${row.status}]${row.deltaStatus ? ` {${row.deltaStatus}}` : ""} score=${row.score.toFixed(1)} surface=${row.surfaceId ?? "-"} ${row.title}`);
+      console.log(`H${row.id} [${row.status}] score=${row.score.toFixed(1)} surface=${row.surfaceId ?? "-"} ${row.title}`);
       console.log(`  primitive=${row.primitive} impact=${row.impactClaim}`);
     }
     if (rows.length === 0) console.log("No hypotheses recorded.");
@@ -874,7 +1247,7 @@ function requiredString(parsed: ParsedArgs, key: string): string {
 function getNumber(parsed: ParsedArgs, key: string): number | undefined {
   const value = getString(parsed, key);
   if (value === undefined) return undefined;
-  const number = Number(value);
+  const number = parseNumericId(value);
   if (!Number.isFinite(number)) throw new Error(`--${key} must be a number`);
   return number;
 }
@@ -889,7 +1262,61 @@ function getBoolean(parsed: ParsedArgs, key: string): boolean {
   return parsed.flags[key] === true || parsed.flags[key] === "true";
 }
 
+function chimeraListStatus(value: string | undefined): "active" | ChimeraStatus | undefined {
+  if (value === undefined) return undefined;
+  if (
+    value === "active" ||
+    value === "starting" ||
+    value === "running" ||
+    value === "stopped"
+  ) return value;
+  throw new Error(`Invalid Chimera status filter: ${value}`);
+}
+
+function parseNumericId(value: string): number {
+  const trimmed = value.trim();
+  const prefixed = /^([A-Za-z])(\d+)$/.exec(trimmed);
+  const raw = prefixed ? prefixed[2] : trimmed;
+  return Number(raw);
+}
+
+function hasFlag(parsed: ParsedArgs, key: string): boolean {
+  return Object.prototype.hasOwnProperty.call(parsed.flags, key);
+}
+
 function autoLinkActiveCampaign(db: ProteusDb, entityType: string, entityId: number, relation: string, eventSummary: string): void {
+  const chimeraSession = currentChimeraSession(db);
+  if (chimeraSession?.campaignId) {
+    const linkId = db.addEntityLink({
+      fromType: "campaign",
+      fromId: chimeraSession.campaignId,
+      toType: entityType,
+      toId: entityId,
+      relation,
+      confidence: 1,
+      note: `Auto-linked from Chimera session ${chimeraSession.publicId}.`
+    });
+    db.addCampaignEvent({
+      campaignId: chimeraSession.campaignId,
+      eventType: "chimera_record_auto_linked",
+      entityType,
+      entityId,
+      summary: `${eventSummary} Linked from Chimera session ${chimeraSession.publicId}.`
+    });
+    if (chimeraSession.roundId) {
+      db.addEntityLink({
+        fromType: "round",
+        fromId: chimeraSession.roundId,
+        toType: entityType,
+        toId: entityId,
+        relation: "has_chimera_record",
+        confidence: 1,
+        note: `Auto-linked from Chimera session ${chimeraSession.publicId}.`
+      });
+    }
+    void linkId;
+    return;
+  }
   db.linkActiveCampaignTo({
     toType: entityType,
     toId: entityId,
@@ -897,6 +1324,45 @@ function autoLinkActiveCampaign(db: ProteusDb, entityType: string, entityId: num
     eventType: "record_auto_linked",
     eventSummary
   });
+}
+
+function guardChimeraProtectedCommands(db: ProteusDb, command: string | undefined, subcommand: string | undefined, parsed: ParsedArgs): void {
+  const chimeraSession = currentChimeraSession(db);
+  if (!chimeraSession) return;
+  const targetRoot = process.env.PROTEUS_TARGET_ROOT?.trim();
+  if (targetRoot && path.resolve(db.targetRoot) !== path.resolve(targetRoot)) {
+    throw new Error(`Chimera session ${chimeraSession.publicId} must use the shared Proteus target root ${targetRoot}. Re-run with --root "${targetRoot}" instead of ${db.targetRoot}.`);
+  }
+  if (command === "campaign" && (subcommand === "create" || subcommand === "checkpoint" || subcommand === "close")) {
+    throw new Error(`Chimera session ${chimeraSession.publicId} cannot mutate campaign state. The coordinator owns campaign create/checkpoint/close; use campaign resume/list/show for context and record scoped evidence or snapshots instead.`);
+  }
+  if (command === "plan-round") {
+    throw new Error(`Chimera session ${chimeraSession.publicId} cannot create campaign rounds. Ask the coordinator to create or update rounds.`);
+  }
+  if (command === "update" && (subcommand === "round" || subcommand === "rounds" || subcommand === "plan" || subcommand === "plans")) {
+    throw new Error(`Chimera session ${chimeraSession.publicId} cannot update campaign rounds. Post a blocker or snapshot for the coordinator.`);
+  }
+  if (command === "branch") {
+    const explicitCampaignId = getNumber(parsed, "campaign-id");
+    if (explicitCampaignId && chimeraSession.campaignId && explicitCampaignId !== chimeraSession.campaignId) {
+      throw new Error(`Chimera session ${chimeraSession.publicId} is assigned to campaign C${chimeraSession.campaignId}; it cannot use C${explicitCampaignId}.`);
+    }
+  }
+}
+
+function currentChimeraSession(db: ProteusDb): ChimeraSessionRow | null {
+  const id = inferCurrentChimeraSessionId(db);
+  if (id) return db.getChimeraSession(id);
+  const envId = process.env.PROTEUS_CHIMERA_SESSION_ID?.trim();
+  return envId ? ({
+    publicId: envId,
+    campaignId: null,
+    roundId: null
+  } as ChimeraSessionRow) : null;
+}
+
+function isCampaignEntityType(value: string): boolean {
+  return value === "campaign" || value === "campaign_event" || value === "campaign_checkpoint" || value === "checkpoint";
 }
 
 function splitList(value: string): string[] {
@@ -1050,6 +1516,80 @@ function parseBranchStatus(status: string): BranchStatus {
   throw new Error("Branch status must be one of: open, testing, killed, promoted, blocked");
 }
 
+function updateBranchStatusFromDecision(
+  db: ProteusDb,
+  entityType: string,
+  entityId: number,
+  decision: string
+): ReturnType<ProteusDb["updateHypothesisBranch"]> | null {
+  if (entityType !== "hypothesis_branch" && entityType !== "branch") return null;
+  const status = branchStatusFromDecision(decision);
+  return status ? db.updateHypothesisBranch({ id: entityId, status }) : null;
+}
+
+function branchStatusFromDecision(decision: string): BranchStatus | null {
+  const value = decision.toLowerCase();
+  if (/\b(kill|killed|discard|discarded|dead)\b/.test(value)) return "killed";
+  if (/\b(promote|promoted|report|reportable)\b/.test(value)) return "promoted";
+  if (/\b(block|blocked)\b/.test(value)) return "blocked";
+  if (/\b(test|testing|candidate|watch|watchlist|open)\b/.test(value)) return "testing";
+  return null;
+}
+
+function chimeraAccessMode(parsed: ParsedArgs): ChimeraAccessMode {
+  const access = getString(parsed, "access") ?? "explorer";
+  if (access === "explorer" || access === "editor") return access;
+  throw new Error("Chimera access must be one of: explorer, editor");
+}
+
+function chimeraMessageKind(parsed: ParsedArgs, key: string, fallback: ChimeraMessageKind): ChimeraMessageKind {
+  const kind = getString(parsed, key) ?? fallback;
+  if (
+    kind === "message" ||
+    kind === "redirect" ||
+    kind === "finding" ||
+    kind === "blocker" ||
+    kind === "snapshot" ||
+    kind === "heartbeat" ||
+    kind === "council" ||
+    kind === "kill" ||
+    kind === "close" ||
+    kind === "error"
+  ) {
+    return kind;
+  }
+  throw new Error("Chimera message kind must be one of: message, redirect, finding, blocker, snapshot, heartbeat, council, kill, close, error");
+}
+
+function optionalCurrentChimeraSessionId(db: ProteusDb, parsed: ParsedArgs, key: string): string | undefined {
+  const explicit = getString(parsed, key);
+  if (explicit) return explicit;
+  return inferCurrentChimeraSessionId(db);
+}
+
+function currentChimeraSessionId(db: ProteusDb, parsed: ParsedArgs, key: string): string {
+  const explicit = getString(parsed, key);
+  if (explicit) return explicit;
+  const inferred = inferCurrentChimeraSessionId(db);
+  if (inferred) return inferred;
+  throw new Error(`Missing --${key}. Chimera agents can omit it only when PROTEUS_CHIMERA_SESSION_ID is set or the command runs inside a registered Chimera session directory.`);
+}
+
+function inferCurrentChimeraSessionId(db: ProteusDb): string | undefined {
+  const envId = process.env.PROTEUS_CHIMERA_SESSION_ID?.trim();
+  if (envId && db.getChimeraSession(envId)) return envId;
+  const envDir = process.env.PROTEUS_CHIMERA_SESSION_DIR?.trim();
+  const cwd = process.cwd();
+  const candidates = db.listChimeraSessions({ limit: 500 });
+  const match = candidates.find((session) => pathContains(session.sessionDir, cwd) || (envDir ? pathContains(session.sessionDir, envDir) : false));
+  return match?.publicId;
+}
+
+function pathContains(parent: string, child: string): boolean {
+  const relative = path.relative(path.resolve(parent), path.resolve(child));
+  return relative === "" || (!!relative && !relative.startsWith("..") && !path.isAbsolute(relative));
+}
+
 function isHelpRequested(parsed: ParsedArgs): boolean {
   return (
     parsed.flags.help === true ||
@@ -1089,17 +1629,39 @@ Usage:
   proteus init [--root <path>] [--name <target>]
   proteus status [--root <path>]
   proteus migrate [--root <path>]
+  proteus merge --root <dest-root> --source <source-root|.vros|memory.sqlite> [--sources a,b] [--dry-run]
+  proteus opencode install [--root <path>] [--force]
+  proteus opencode doctor [--root <path>]
+  proteus chimera config init|show|disable [--opencode-command <cmd>] [--server-url <url>] [--model <provider/model>] [--variant <variant>] [--timeout <seconds|0>]
+  proteus chimera doctor [--root <path>]
+  proteus chimera stop-server [--root <path>]
+  proteus chimera start --root <path> --role <role> --goal <text> [--campaign-id <id>] [--round-id <id>] [--access explorer|editor] [--access-notes <text>]
+  proteus chimera swarm --root <path> --plan <json> [--run]
+  proteus chimera council start|accept|open-round|cue-turn|turn|status|close --root <path>
+  proteus chimera send|broadcast|post|snapshot|workflow-snapshot|heartbeat|run|wake|poll|list|recover|kill|close --root <path>
+  proteus chimera run --root <path> --id <CH-ID> [--message <text>] [--timeout <seconds|0>]
+  proteus chimera wake --root <path> --id <CH-ID> [--timeout <seconds|0>]
+  proteus chimera list --root <path> [--active] [--status active|starting|running|stopped] [--all] [--limit <n>]
+  proteus chimera send --root <path> --id <CH-ID> --message <text> [--priority]
+  proteus chimera send --root <path> --to-id <CH-ID> --message <text> [--from-id <CH-ID>] [--priority]
+  proteus chimera post|heartbeat --root <path> [--id <CH-ID>]
+  proteus chimera snapshot --root <path> [--id <CH-ID>] [--limit <n>]   # read latest agent-authored state snapshot(s)
+  proteus chimera snapshot --root <path> --id <CH-ID> --body <text>   # write agent-authored state summary
+  proteus chimera workflow-snapshot --root <path> --id <CH-ID> [--limit <n>] [--max-message-chars <n>]   # compact OpenCode transcript export
+  proteus chimera poll --root <path> --unread --agent [--id <CH-ID>]
   proteus ingest [--root <path>] [paths...]
   proteus observe [--root <path>]
   proteus plan-round [--root <path>] [--objective <text>] [--context <text>] [--plan-json <path>] [--status active|paused|completed|blocked|planned|superseded] [--write]
   proteus campaign create --title <text> [--objective <text>] [--status active|paused|completed|blocked|superseded]
   proteus campaign resume [--id <id>]
   proteus campaign checkpoint --id <id> [--confirmed a,b] [--killed a,b] [--open a,b] [--next <text>]
+  proteus campaign close --id <id> [--status completed|blocked|superseded] [--summary <text>]
   proteus branch add --title <text> [--campaign-id <id>] [--round-id <id>] [--primitive <text>]
   proteus branch list [--campaign-id <id>] [--status open|testing|killed|promoted|blocked]
+  proteus branch update --id <id> --status open|testing|killed|promoted|blocked
   proteus link --from-type <type> --from-id <id> --relation <text> --to-type <type> --to-id <id>
   proteus roles
-  proteus prompt --role <atlas|argus|loom|chaos|libris|mimic|artificer|skeptic|cicada> --surface <text>
+  proteus prompt --role <generalist|argus|loom|chaos|libris|mimic|artificer|skeptic|cicada> --surface <text>
   proteus record surface --name <text> [--family <text>] [--files a,b] [--status active|covered|exhausted|low_roi|blocked|watch]
   proteus record hypothesis --title <text> [--surface-id <id>] [--impact <text>]
   proteus record evidence --title <text> [--kind <kind>] [--body <text>]
@@ -1121,6 +1683,14 @@ Usage:
   proteus learn add --title <text> [--category <category>] [--scope <scope>] [--body <text>] [--tags a,b]
   proteus learn query [text] [--scope <scope>] [--category <category>] [--target-scope]
   proteus learn export [--out <path>]
+
+Role codenames are canonical Proteus roles. Host subagent names or nicknames
+belong in --surface, --objective, or notes, not --role.
+
+OpenCode support:
+  proteus opencode install writes project-local OpenCode config, /proteus
+  command, Proteus skills, specialist agents, templates, and local MCP wiring.
+  proteus opencode doctor checks the generated files and OpenCode CLI.
 `);
 }
 

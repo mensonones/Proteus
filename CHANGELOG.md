@@ -1,43 +1,150 @@
 # Changelog
 
-## Unreleased
-
-### Added
-
-- Ephemeral Tor/Proxychains lifecycle script (`plugins/proteus/scripts/tor-ephemeral.sh`)
-  with seven commands: bootstrap, start, check, enforce, relax, stop, purge.
-- Network Operations section in the base research contract requiring all outbound
-  traffic through `proxychains4` and prohibiting host-level `webfetch` usage.
-- Iptables kernel-level enforcement mode (`enforce`/`relax`) that DROP all non-Tor
-  outbound TCP, blocking even host-level HTTP clients.
-- Operational Hygiene section in the base research contract mandating active
-  trace cleanup (8-step scrub checklist) before every agent return or handoff.
-- Per-agent scrub instructions for Artificer, Chaos, Mimic, Cicada, Atlas, and
-  Libris covering temp files, build artifacts, Docker images, proxy captures,
-  and environment variables.
-- Network routing and post-operation scrub directives in web-intel, web-research,
-  and mobile-reversing skills.
-- Tor/Proxychains and hygiene sections in OpenCode `/proteus` command template
-  and Claude Code `commands/proteus.md`.
-- Research artifact anti-leak patterns in `.gitignore` covering findings,
-  reports, proxy captures, credentials, shell history, and extracted artifacts.
-
-### Changed
-
-- Network routing now uses `proxychains4` exclusively; `ALL_PROXY` env var
-  export was removed from the bootstrap flow because it conflicts with
-  proxychains and causes connection failures.
-- Install/cleanup robustness: `install_tor` now reports failures correctly,
-  `nohup` added for shell-independent process lifetime, `stop_ephemeral` kills
-  orphaned processes and cleans stale data directories.
-- Proxychains config fixed from `socks4` to `socks5` for remote DNS support.
+## 2.1.4 - 2026-07-14
 
 ### Fixed
 
-- `tor-*` gitignore pattern that accidentally excluded `tor-ephemeral.sh` script;
-  replaced with specific patterns (`tor-data/`, `tor-ephemeral/`, `torrc.local`).
-- Tor process dying when bash shell ended (missing `nohup` in start flow).
-- `install_tor` returning success when package installation failed silently.
+- Preserved the runtime and database version when the MCP server runs from an isolated Claude Code or Codex plugin cache.
+
+### Changed
+
+- Made the MCP smoke test execute from an isolated packaged-plugin copy and assert the advertised server version.
+
+## 2.1.3 - 2026-07-14
+
+### Fixed
+
+- Resolved the bundled Claude Code MCP runtime through `CLAUDE_PLUGIN_ROOT` so it starts from any workspace.
+
+### Changed
+
+- Documented automatic Claude Code plugin MCP startup and retained CLI registration as a manual fallback.
+- Corrected Claude Code usage examples to the namespaced `/proteus:proteus` plugin command.
+- Added release validation for the Claude Code plugin MCP path.
+
+## 2.1.2 - 2026-07-13
+
+### Fixed
+
+- Started managed OpenCode servers without a visible Windows console window.
+- Serialized managed OpenCode server startup across concurrent Chimera sessions.
+- Kept fresh Chimera sessions in `starting` until the agent emits real progress instead of promoting them from PID or session-id presence alone.
+- Rejected test-only `mock-opencode` commands from normal Chimera configuration and runtime use.
+
+### Changed
+
+- Isolated Chimera smoke-test port ranges and added hidden `.cmd` launcher and mock-command guard coverage.
+
+## 2.1.1 - 2026-07-09
+
+### Fixed
+
+- Updated GitHub repository, marketplace, plugin metadata, and tarball install references for the `Vyntra-Research/Proteus` namespace.
+- Made `proteus chimera snapshot` without `--body` read the latest agent-authored snapshot state instead of failing with a write-only usage error.
+- Added MCP `proteus_chimera_latest_snapshot` for explicit read-only snapshot checks.
+
+### Changed
+
+- Clarified CLI help, Chimera docs, coordinator skill, and Chimera-agent skill wording around `poll`, `snapshot`, and `workflow-snapshot`.
+
+## 2.1.0 - 2026-07-06
+
+### Fixed
+
+- Hardened `chimera workflow-snapshot` for long OpenCode sessions by exporting through temporary files instead of relying on subprocess stdout buffering.
+- Clarified Chimera priority delivery results so OpenCode steer acceptance is not mistaken for semantic agent acknowledgement.
+- Preserved latest control-message metadata in `notifications.json` even after the agent inbox is consumed.
+- Added the missing `campaign close` usage line to CLI help.
+
+### Added
+
+- Added direct OpenCode project support through `proteus opencode install|doctor` and matching MCP tools.
+- Added generated OpenCode assets for `/proteus`, Proteus coordinator/specialist skills, specialist subagents, templates, instructions, and local `proteus-mcp` wiring.
+
+### Changed
+
+- Clarified CLI, MCP, docs, and Chimera skill wording around agent-authored `chimera snapshot` versus coordinator `chimera workflow-snapshot`.
+
+## 2.0.3 - 2026-06-29
+
+### Fixed
+
+- Changed Chimera list item hints so active sessions no longer display stopped-session resume guidance.
+- Treated priority delivery as successful when a stopped session is queued and auto-wake starts cleanly.
+- Reconciled stale attached OpenCode session ids from local Chimera session files before workflow snapshot export.
+- Hardened `chimera workflow-snapshot` against transient OpenCode export failures with short retries, JSON recovery from noisy output, and more useful export diagnostics.
+- Improved Chimera snapshot polling for large agent-authored snapshots by returning bounded previews plus the full `snapshot.md` path and body length metadata.
+
+## 2.0.2 - 2026-06-29
+
+### Fixed
+
+- Removed the separate Chimera relay command surface. Direct single-recipient messages now use `chimera send`/`proteus_chimera_send` for coordinator-to-agent and agent-to-agent flows, with optional source metadata handled by the unified path.
+- Changed Chimera `start` to auto-start OpenCode bootstrap by default and report `starting` during attachment instead of leaving new sessions in an ambiguous ready state.
+- Added Chimera session recovery for stale or inconsistent pid, status, and OpenCode session attachment state, including `chimera recover` and MCP `proteus_chimera_recover`.
+- Hardened `chimera run` so manual runs do not compete with sessions that are already starting or running, and added optional resume instructions through `--message`/`message`.
+- Changed priority delivery for parked sessions to use compact wake behavior for queued messages instead of treating every priority message as a full research rerun.
+- Changed OpenCode server selection to reuse an already healthy local OpenCode server in the managed range before starting a new one.
+- Improved Chimera polling visibility with control status, priority-pending state, delivery state, and recommended next command.
+- Added active Chimera session list filters through CLI `chimera list --active` and MCP `proteus_chimera_list active=true`.
+- Collapsed parked, closed, killed, failed, timed-out, and legacy waiting Chimera session states into reusable `stopped` sessions with verdict details stored separately.
+- Changed default Chimera list scope to sessions linked to active campaigns, including all active campaigns when more than one is open. Added campaign labels in list output and `--all`/`all=true` for historical sessions.
+- Accepted prefixed numeric ids such as `B8` in CLI/MCP numeric-id parsing.
+
+### Changed
+
+- Updated coordinator and Chimera docs/skills to explain when to use `start`, `send`, `broadcast`, `poll`, `workflow-snapshot`, `recover`, `run`, `kill`, and `close`, including the difference between queued messages, priority wake, and `run --message` resume.
+- Expanded CLI and MCP smoke coverage for auto-start, recovery, unified direct messaging, and prefixed branch ids.
+
+## 2.0.0 - 2026-06-27
+
+### Added
+
+- Added optional Chimera mode for OpenCode-backed secondary agents managed by Proteus.
+- Added Chimera CLI commands for config, doctor, start, swarm, council, send, broadcast, post, snapshot, workflow-snapshot, heartbeat, run, wake, attach-opencode, poll, list, kill, close, and stop-server.
+- Added MCP tools matching the Chimera CLI control surface.
+- Added SQLite-backed Chimera sessions and messages with mirrored `.vros/chimera` session files, labs, JSONL inbox/outbox, snapshots, kill flags, and OpenCode logs.
+- Added coordinator-controlled Chimera access modes: default `explorer` and explicit `editor` per launched agent.
+- Added `chimera-agent` skill for secondary agents, including communication commands, shared-chat broadcast, inbox polling, access-mode discipline, snapshots, heartbeat, and stop conditions.
+- Added OpenCode doctor checks and mock-OpenCode smoke coverage so CI validates Chimera without requiring an API key.
+- Added priority Chimera notifications for coordinator messages and broadcasts, plus a session-local `notifications.json` signal that running agents check periodically before polling Proteus.
+- Added managed OpenCode server/session tracking for Chimera runs, `chimera run` reuse of existing labs, manual `attach-opencode`, and priority `delivery=steer` pings when an OpenCode session is attached.
+- Added Chimera brainstorm councils with ordered turns, automatic cueing, exclusive council transcripts, and bounded close instructions.
+- Added compact Chimera workflow snapshots that export recent OpenCode assistant messages while excluding user messages, tool calls, tool outputs, command output, patches, and file payloads.
+- Added `proteus branch update` and MCP `proteus_update_branch` for correcting branch status directly, plus automatic branch-status updates when decisions are recorded against `hypothesis_branch` or `branch` records.
+- Added a cross-process SQLite lock layer for Proteus writes so parallel Chimera agents and MCP/CLI calls coordinate through a single memory base more reliably.
+
+### Changed
+
+- Updated the main coordinator skill to explain when to use Chimera, how to check config, how to poll unread messages, and how to choose `explorer` versus `editor` access.
+- Updated README and Chimera docs with the official OpenCode project link, GLM-style model/variant target config, CLI examples, swarm usage, MCP tools, broadcast chat, and access-mode guidance.
+- Consolidated human docs by replacing redundant planning/update documents with the current technical Chimera reference.
+- Expanded CLI and MCP smoke tests to cover Chimera config/start/post/poll/snapshot/workflow-snapshot/heartbeat/run/kill/close/swarm/council/direct-message flows, branch updates, no-timeout config, and MCP parity.
+
+### Migration
+
+- Existing `.vros/memory.sqlite` databases migrate automatically to add Chimera session and message tables when opened by Proteus 2.0.0. Proteus also checks the recorded migration ids, so a database stamped with the current runtime version still receives any missing idempotent migrations.
+- Chimera remains disabled by default. Normal Proteus CLI/MCP usage does not require OpenCode.
+
+## 1.0.3 - 2026-06-23
+
+### Fixed
+
+- Fixed MCP `evidenceIds` parsing for decisions and validation gates when agents send numeric IDs as strings, such as `["434"]`, or comma-separated strings.
+- Updated MCP schemas to advertise numeric evidence ID arrays while keeping compatibility with numeric-string inputs.
+- Added MCP smoke coverage so high-impact decisions with numeric-string evidence IDs do not trigger false `decision_without_evidence` advisories.
+## 1.0.2 - 2026-06-22
+
+### Added
+
+- Added `proteus merge` and MCP `proteus_merge_memory` to merge one or more Proteus `.vros/memory.sqlite` bases into a destination workspace root.
+- Merge accepts source workspace roots, `.vros` directories, or direct `.vros/memory.sqlite` paths, with `--dry-run` support for safe previews.
+- Merge remaps copied campaign, round, surface, hypothesis, evidence, branch, checkpoint, link, gate, decision, and FTS references into the destination database.
+
+### Changed
+
+- Strengthened the base research contract and coordinator skill to prefer the actual workspace root for Proteus memory unless explicitly instructed otherwise.
+- Documented recovery examples for merging accidental subfolder `.vros` bases back into the correct workspace root.
 
 ## 1.0.0 - 2026-06-17
 

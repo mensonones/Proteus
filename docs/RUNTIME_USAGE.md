@@ -3,7 +3,7 @@
 ## Install
 
 ```powershell
-npm install -g https://codeload.github.com/rafabd1/Proteus/tar.gz/refs/heads/main
+npm install -g https://codeload.github.com/Vyntra-Research/Proteus/tar.gz/refs/heads/main
 proteus --version
 ```
 
@@ -19,44 +19,36 @@ Proteus requires Node.js 24 or newer because the first runtime uses
 
 ## Assistant Orchestration
 
-In Codex CLI, install the plugin, start a new session, and invoke Proteus with
-`$proteus`. Use `/skills` to confirm that the entrypoint is available. The
-`@Proteus` mention belongs to supported ChatGPT desktop plugin surfaces; it is
-not a Codex CLI alias.
+In Codex, invoke Proteus with `@proteus`. Treat `@proteus` as the normal
+entrypoint because it lets the assistant load the plugin, start from the main
+coordinator skill, and pull in specialist skills only when needed. Slash-style
+skill references should be reserved for cases where the user intentionally wants
+one specific skill.
 
-In Claude Code, use the plugin command `/proteus`.
+In Claude Code, use the plugin command `/proteus:proteus`.
 
-In Opencode, use `/proteus`. Opencode loads the coordinator template, skills
-from `.opencode/skills/`, subagent contracts from `.opencode/agents/`, and
-support templates from `.opencode/templates/`. Make sure the MCP server is
-configured in `opencode.json`.
+In OpenCode, install project support and use `/proteus`:
 
-Proteus skills are not the same thing as Proteus subagent roles. Skills are
-loaded capability contracts, while subagent roles are bounded personas such as
-Atlas, Argus, Loom, Chaos, Libris, Mimic, Artificer, Skeptic, and Cicada. Atlas
-maps large, unfamiliar, mixed, or materially changed targets before broad
-planning and does not generate findings. The
-`mobile-reversing` skill is a mobile-only capability pack. The standalone
-`maintainability-review` skill is for structural code-quality review of a diff
-or named target. Argus is different: it is a bounded security-review subagent
-role for local primitives and vulnerability surfaces, not a generic code-review
-tool. Use `$proteus` in Codex CLI or `/proteus` in Claude Code and Opencode for
-most work, and name a tactical skill directly only when you want that targeted
-pass.
+```powershell
+proteus opencode install --root C:\path\to\target
+proteus opencode doctor --root C:\path\to\target
+```
+
+This writes `opencode.json`, `.opencode/commands/proteus.md`,
+`.opencode/skills/proteus*/`, `.opencode/agents/proteus-*.md`, templates, and
+the local MCP server config for `proteus-mcp`. See [Installation](INSTALLATION.md)
+for details.
 
 Proteus is designed to benefit from host-assistant orchestration features when
 they are available in the session:
 
 - Use goal or campaign mode for user-requested continuous campaigns,
   long-running work, or research objectives that should persist until explicit
-  stop conditions are met (available in Claude Code and Opencode).
+  stop conditions are met.
 - Use subagents for independent, bounded Proteus fronts when delegation is
-  available and allowed (Opencode, Codex, or Claude Code). Assign one codename
-  and one surface per subagent:
-  Atlas, Argus, Loom, Chaos, Libris, Mimic, Artificer, Skeptic, or Cicada.
-- In Codex, run `proteus-install-codex-agents` once after installing or updating
-  the CLI runtime. This makes the nine native `proteus-*` agent types available
-  across local projects. Start a new Codex session after installation.
+  available and allowed. Assign one canonical Proteus codename and one surface
+  per subagent. Host subagent names are not Proteus roles. Valid codenames are
+  Generalist, Argus, Loom, Chaos, Libris, Mimic, Artificer, Skeptic, or Cicada.
 - Keep the coordinator in charge of ROI selection, memory updates, validation
   gates, duplicate checks, kill/promote decisions, and replanning.
 - Fall back to serial local execution when goal mode, subagents, MCP tools, or
@@ -68,28 +60,6 @@ candidate still needs realistic attacker control, documented/default
 configuration, negative controls, dedupe, and a PoC that does not depend on
 artificial lab help. It also needs recorded public intel/timeline review and an
 evidence-backed Skeptic refutation pass.
-
-## Mobile Artifact Helpers
-
-The mobile skill includes Python 3.9+ helpers. Inspect only the profiles needed
-for the supplied artifact:
-
-```powershell
-python plugins/proteus/skills/mobile-reversing/scripts/mobile_toolchain.py --check --profiles core,android,rn,native --json --versions
-```
-
-Extract into a fresh directory outside a directory input:
-
-```powershell
-python plugins/proteus/skills/mobile-reversing/scripts/extract_mobile_artifacts.py target.apk --output mobile-run-001
-```
-
-The extractor treats archives as untrusted input, enforces file-count, expanded
-size, per-file size, compression-ratio, path, and symlink limits, handles nested
-APK files in XAPK/APKS packages, and writes `manifest.json` plus `triage.txt`.
-It uses installed decompilers and native-analysis tools when available. Use
-`--no-tools` for inventory-only operation. Never reuse a non-empty output
-directory; this prevents stale evidence from entering the current run.
 
 ## Initialize A Target
 
@@ -103,6 +73,20 @@ This creates:
 <target>/.vros/memory.sqlite
 <target>/.vros/exports/
 ```
+
+## Memory Root And Base Merge
+
+Prefer the actual workspace/repository root as the target `--root` unless you
+intentionally want a separate memory base. If a `.vros` base was accidentally
+created in a nested folder, merge it into the canonical root before continuing:
+
+```powershell
+node dist/cli.js merge --root C:\path\to\target --source C:\path\to\target\packages\foo\.vros\memory.sqlite --dry-run
+node dist/cli.js merge --root C:\path\to\target --sources .\old\.vros\memory.sqlite,.\nested\.vros
+```
+
+Sources may be workspace roots, `.vros` directories, or direct
+`.vros/memory.sqlite` paths. The destination is always the Proteus `--root`.
 
 ## Ingest Prior Work
 
@@ -201,7 +185,7 @@ node dist/cli.js prompt --role argus --surface "Auth/session boundary" --objecti
 Valid roles:
 
 ```text
-atlas
+generalist
 argus
 loom
 chaos
@@ -234,6 +218,7 @@ conditions after work has happened; it is not a creation command.
 
 ```powershell
 node dist/cli.js query duplicates "tenant state reused"
+node dist/cli.js query similar "tenant state reused"
 node dist/cli.js query memory "tenant state reused"
 node dist/cli.js query surfaces "auth"
 node dist/cli.js list surfaces
@@ -252,10 +237,12 @@ and report source records for possible duplicate prior coverage. It does not
 search hypotheses, decisions, evidence, rounds, generic docs, watchlists,
 discarded paths, or candidate registers.
 
-Use `query memory` for broad FTS recall across hypotheses, decisions, evidence,
-gates, rounds, surfaces, reports, docs, watchlists, discarded paths, candidate
-registers, and agent outputs. Use `list` commands when the agent needs
-structured records by category, such as decisions, evidence, gates, and
+Use `query similar` as the normal first pass for a candidate, primitive, or
+impact claim because it returns both narrow duplicate coverage and broad memory
+matches. Use `query memory` for broad FTS recall across hypotheses, decisions,
+evidence, gates, rounds, surfaces, reports, docs, watchlists, discarded paths,
+candidate registers, and agent outputs. Use `list` commands when the agent
+needs structured records by category, such as decisions, evidence, gates, and
 surfaces. Use `show <entityType> <id>` to inspect the complete record.
 
 ## Record Global Learnings
@@ -337,12 +324,47 @@ integrations:
 ```text
 proteus_init
 proteus_status
+proteus_migrate
+proteus_merge_memory
+proteus_chimera_config
+proteus_chimera_doctor
+proteus_chimera_stop_server
+proteus_chimera_start
+proteus_chimera_swarm
+proteus_chimera_council
+proteus_chimera_broadcast
+proteus_chimera_send
+proteus_chimera_post
+proteus_chimera_snapshot
+proteus_chimera_latest_snapshot
+proteus_chimera_workflow_snapshot
+proteus_chimera_heartbeat
+proteus_chimera_run
+proteus_chimera_attach_opencode
+proteus_chimera_poll
+proteus_chimera_list
+proteus_chimera_recover
+proteus_chimera_kill
+proteus_chimera_close
+proteus_opencode_install
+proteus_opencode_doctor
 proteus_ingest
 proteus_observe
 proteus_plan_round
+proteus_campaign_create
+proteus_campaign_resume
+proteus_campaign_checkpoint
+proteus_campaign_close
+proteus_record_branch
+proteus_update_branch
+proteus_link_entities
+proteus_roles
+proteus_prompt
 proteus_query_duplicates
 proteus_query_memory
+proteus_query_similar
 proteus_query_surfaces
+proteus_query_revisit
 proteus_list_records
 proteus_get_record
 proteus_record_surface
@@ -373,17 +395,15 @@ Claude Code uses the project-level MCP configuration at:
 .mcp.json
 ```
 
-Opencode uses the MCP configuration declared in `opencode.json`.
-
 ## Anti-Revisit Updates
 
 ```powershell
 node dist/cli.js update surface --root C:\path\to\target --id 1 --status exhausted --revisit "Only reopen on new runtime mode or new chain dependency"
 ```
 
-Use this after a round when Atlas, Argus, Loom, Chaos, Libris, Mimic, Artificer,
-Skeptic, or Cicada has mapped, exhausted, or downgraded a surface. The planner uses these status
-fields to avoid repeated low-ROI work.
+Use this after a round when Generalist, Argus, Loom, Chaos, Libris, Mimic,
+Artificer, Skeptic, or Cicada has exhausted or downgraded a surface. The planner
+uses these status fields to avoid repeated low-ROI work.
 
 ## Agent Output Records
 

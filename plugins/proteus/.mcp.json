@@ -3,9 +3,8 @@
     "proteus": {
       "command": "node",
       "args": [
-        "./scripts/proteus-mcp.cjs"
-      ],
-      "cwd": "."
+        "${CLAUDE_PLUGIN_ROOT}/scripts/proteus-mcp.cjs"
+      ]
     }
   }
 }

@@ -2,7 +2,7 @@
 
 ## 1. System Overview
 
-Proteus is composed of six layers:
+Proteus is composed of five layers:
 
 ```mermaid
 flowchart TD
@@ -12,8 +12,6 @@ flowchart TD
   Memory["Structured memory store"]
   Tools["Tool orchestration layer"]
   Labs["Lab and PoC workspace"]
-  NetOps["Network operations (ephemeral Tor)"]
-  Hygiene["Operational hygiene (trace cleanup)"]
   Export["Human exports and reports"]
 
   User --> Plugin
@@ -24,15 +22,11 @@ flowchart TD
   Labs --> Memory
   Memory --> Export
   Coordinator --> Export
-  Coordinator --> NetOps
-  NetOps --> Tools
-  NetOps --> Hygiene
-  Hygiene --> Memory
 ```
 
 The assistant integration layer provides the agent instructions and interaction
-surface for Codex, Claude Code, Opencode, and MCP-capable hosts. The coordinator
-runtime turns the research framework into a repeatable process. The
+surface for Codex, Claude Code, and MCP-capable hosts. The coordinator runtime
+turns the research framework into a repeatable process. The
 memory store preserves learned state. The tool layer instruments the target
 environment. The lab layer validates candidates. Exports turn structured state
 into readable Markdown and reports.
@@ -53,16 +47,10 @@ Implementation:
 
 - Codex plugin manifest and skill;
 - Claude Code plugin manifest, slash command, subagents, and MCP config;
-- Opencode `opencode.json` config, `/proteus` command, skills, subagents, support templates, and MCP config under `.opencode/`;
 - `SKILL.md`;
 - Markdown templates;
 - PowerShell and POSIX wrappers under `plugins/proteus/scripts`;
 - MCP configuration under `plugins/proteus/.mcp.json`.
-
-`plugins/proteus/` is the canonical source for role contracts, skills, and
-templates. The root `.opencode/` tree is regenerated from it with
-`npm run sync:opencode`, applying only OpenCode-specific naming and resolution
-adapters.
 
 ### Coordinator Runtime
 
@@ -140,7 +128,6 @@ as prompt generation plus output validation.
 Canonical role names:
 
 ```text
-Atlas: architecture and attack-surface mapping.
 Argus: component-level review.
 Loom: macro/chaining analysis.
 Chaos: fuzzing and edge-case generation.
@@ -148,7 +135,6 @@ Libris: docs/contract verification.
 Mimic: runtime/adapter/environment divergence.
 Artificer: PoC/lab construction.
 Skeptic: adversarial review and refutation.
-Cicada: exploit development, bypass, chaining, reliability, and impact proof.
 ```
 
 Memory records should store both the codename and the role family so exports are
@@ -214,48 +200,6 @@ Responsibilities:
   consequences.
 
 Exports are views of memory, not the primary state.
-
-### Network Operations (Ephemeral Tor)
-
-Responsibilities:
-
-- bootstrap ephemeral Tor on demand (install if missing, start circuit);
-- route all outbound traffic through `proxychains4` (not via env vars — they
-  conflict);
-- enforce Tor-only traffic at the kernel level with iptables rules that DROP
-  all non-Tor outbound TCP;
-- verify the exit IP through the Tor Project API;
-- tear down the circuit and data directory during scrub;
-- optionally purge tor and proxychains packages from the system when the
-  campaign ends.
-
-Implementation:
-- `plugins/proteus/scripts/tor-ephemeral.sh` — seven-command lifecycle script
-  (bootstrap, start, check, enforce, relax, stop, purge);
-- iptables `PROTEUS_TOR_ENFORCE` chain for kernel-level enforcement;
-- `nohup` for shell-independent process lifetime.
-
-The enforcement mode blocks the host's built-in `webfetch` tool (which bypasses
-the OS network stack) by DROPing all outbound TCP that does not go through the
-local SOCKS5 proxy on 127.0.0.1:9050. This is a netfilter rule, not a prompt
-suggestion — it cannot be bypassed by ignoring instructions.
-
-### Operational Hygiene (Trace Cleanup)
-
-Responsibilities:
-
-- mandate active trace cleanup before every agent return or handoff;
-- delete temporary files, build artifacts, extracted directories, downloaded
-  content, proxy captures, credential files;
-- unset environment variables holding secrets or proxy configuration;
-- clean shell history for sensitive commands;
-- ensure all research artifacts live inside `.vros/`;
-- tear down the ephemeral Tor circuit and data directory;
-- record deviations when agents fail to scrub.
-
-The hygiene layer is enforced through the base research contract, not through
-a separate runtime process. Every role and skill must comply; non-compliant
-agents must record the deviation in their contract signature.
 
 ## 3. Data Flow
 
@@ -360,32 +304,35 @@ Immediate kill reasons:
 - duplicate of an existing finding;
 - old trivial bug with weak impact.
 
-## 7. Runtime and Technology Plan
+## 7. Runtime Stack
 
-Phase 1 should use:
+Proteus uses:
 
-- TypeScript runtime;
-- SQLite memory database;
-- Zod schemas;
-- Markdown templates;
-- Node child process orchestration;
-- optional Python helpers for ecosystem-specific analysis;
-- CLI first, MCP later.
+- TypeScript for the CLI and MCP runtime;
+- SQLite for local target memory;
+- Markdown templates for exports, labs, reports, and role contracts;
+- Node child processes for local tool orchestration;
+- Codex and Claude Code plugin packages for assistant integration;
+- OpenCode as the optional Chimera secondary-agent runtime.
 
-Expected commands:
+Core commands:
 
 ```text
-vros init <target>
-vros ingest <path>
-vros observe
-vros plan-round
-vros prompt-agents
-vros record <entity>
-vros validate-output <file>
-vros query duplicates <text>
-vros query revisit <surface>
-vros export markdown
-vros lab create <candidate-id>
+proteus init
+proteus ingest
+proteus observe
+proteus plan-round
+proteus prompt
+proteus record <entity>
+proteus query duplicates
+proteus query similar
+proteus query memory
+proteus query revisit
+proteus branch add|list|update
+proteus export
+proteus lab create
+proteus chimera <command>
+proteus-mcp
 ```
 
 ## 8. Integration With Assistant Hosts
@@ -395,7 +342,7 @@ The assistant integration should instruct the agent to:
 - use goal or campaign mechanisms for user-requested continuous campaigns or
   persistent objectives when the capability is available;
 - use available subagents for parallel, independent Proteus fronts when the
-  session allows delegation (Opencode, Codex, or Claude Code);
+  session allows delegation;
 - initialize or load target memory;
 - inspect existing findings/reports before new work;
 - create a round plan before delegating;
@@ -406,9 +353,8 @@ The assistant integration should instruct the agent to:
 - preserve discarded paths and playbook material;
 - stop on report-grade candidates, exhaustion, blockers, or user interruption.
 
-The coordinator remains the authority for strategy and evidence quality. Codex,
-Opencode, or Claude Code subagents may explore bounded fronts, but they do not
-promote findings directly.
+The coordinator remains the authority for strategy and evidence quality. Codex
+subagents may explore bounded fronts, but they do not promote findings directly.
 Goal mode may keep a campaign alive across long work, but stop conditions,
 replan triggers, and validation gates still come from Proteus memory.
 
@@ -426,28 +372,3 @@ The runtime will execute local tools. It must:
 - avoid storing secrets in exports;
 - allow redaction of requests, tokens, and credentials;
 - maintain append-only evidence where feasible.
-
-Operational security for the researcher:
-
-- all outbound network traffic must be routed through ephemeral Tor via
-  Proxychains; direct connections are prohibited;
-- the host's `webfetch` mechanism is blocked by iptables enforcement when
-  active, preventing accidental IP exposure;
-- Tor must not persist as a system service after the round; data directories
-  and packages are purged at campaign end;
-- no research artifacts, credentials, proxy captures, or extracted content
-  may remain on disk after scrub;
-- `.gitignore` blocks accidental commits of findings, reports, proxy dumps,
-  session tokens, shell history, and extracted artifacts.
-
-## 10. Open Design Questions
-
-- Should the first runtime be pure TypeScript or TypeScript with Python helper
-  packages?
-- Should MCP be implemented in M1 or after the CLI is stable?
-- Should the memory store be one database per target or one global database with
-  target namespaces?
-- How strict should output validation be before the system rejects an agent
-  result?
-- Should public-intel search be manual checklist first or tool-assisted from
-  the beginning?

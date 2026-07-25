@@ -1,23 +1,22 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ROLE_ORDER = exports.ROLES = void 0;
+exports.normalizeAgentCodename = normalizeAgentCodename;
+exports.validRoleList = validRoleList;
 exports.ROLES = {
-    atlas: {
-        codename: "atlas",
-        displayName: "Atlas",
-        family: "architecture-surface-mapping",
-        purpose: "Build an evidence-backed architecture and attack-surface map for large, unfamiliar, mixed, or materially changed targets before broad planning.",
-        startsWhen: "The coordinator lacks a fresh map for a large, unfamiliar, mixed, or materially changed target; skip it for a bounded known target with a fresh map.",
+    generalist: {
+        codename: "generalist",
+        displayName: "Generalist",
+        family: "generalist-triage",
+        purpose: "Run a bounded general triage front when no specialist role fits cleanly, preserving useful coverage, killed paths, and next-step recommendations without inventing a new codename.",
+        startsWhen: "The coordinator needs a broad but still bounded triage pass or a subagent result does not map cleanly to a specialist role.",
         requiredOutput: [
-            "architecture and component map with exact evidence",
-            "entrypoints, trust boundaries, and important data/state flows",
-            "runtime, deployment, and target-type context",
-            "recent-risk deltas and architecture drift",
-            "ranked high-ROI surface shortlist",
-            "skipped surfaces and revisit conditions",
-            "unknowns and tooling gaps",
-            "bounded non-overlapping agent splits",
-            "map freshness trigger"
+            "bounded scope reviewed",
+            "relevant context recovered",
+            "live candidates",
+            "killed or duplicate paths",
+            "watchlist items",
+            "recommended specialist follow-up"
         ]
     },
     argus: {
@@ -140,7 +139,7 @@ exports.ROLES = {
     }
 };
 exports.ROLE_ORDER = [
-    "atlas",
+    "generalist",
     "argus",
     "loom",
     "chaos",
@@ -150,3 +149,24 @@ exports.ROLE_ORDER = [
     "skeptic",
     "cicada"
 ];
+function normalizeAgentCodename(value) {
+    const normalized = String(value ?? "")
+        .trim()
+        .toLowerCase()
+        .replace(/^proteus[-_:]/, "")
+        .replace(/\s+/g, "-");
+    if (!normalized)
+        return null;
+    if (Object.prototype.hasOwnProperty.call(exports.ROLES, normalized))
+        return normalized;
+    for (const codename of exports.ROLE_ORDER) {
+        const role = exports.ROLES[codename];
+        const display = role.displayName.toLowerCase().replace(/\s+/g, "-");
+        if (normalized === display)
+            return codename;
+    }
+    return null;
+}
+function validRoleList() {
+    return exports.ROLE_ORDER.join(", ");
+}

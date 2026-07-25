@@ -50,7 +50,6 @@ exports.hypothesisInputSchema = {
             impactClaim: optionalString(value.impactClaim, "unknown"),
             heuristicFamily: optionalString(value.heuristicFamily, "unknown"),
             status: enumValue(value.status, ["live", "candidate", "watchlist", "discarded", "promoted_to_poc", "report_grade"], "live"),
-            deltaStatus: optionalEnumValue(value.deltaStatus, ["new", "regression", "persistent", "change", "untracked"]),
             score: clampNumber(value.score, 0, 100, 0),
             duplicateRisk: clampNumber(value.duplicateRisk, 0, 10, 5),
             expectedBehaviorRisk: clampNumber(value.expectedBehaviorRisk, 0, 10, 5),
@@ -173,7 +172,16 @@ function stringArray(input) {
     return Array.isArray(input) ? input.filter((item) => typeof item === "string") : [];
 }
 function numberArray(input) {
-    return Array.isArray(input) ? input.filter((item) => typeof item === "number" && Number.isFinite(item)) : [];
+    const values = Array.isArray(input) ? input : typeof input === "string" ? input.split(",") : [];
+    return values
+        .map((item) => {
+        if (typeof item === "number")
+            return item;
+        if (typeof item === "string" && item.trim().length > 0)
+            return Number(item.trim());
+        return NaN;
+    })
+        .filter((item) => Number.isFinite(item) && item > 0);
 }
 function enumValue(input, allowed, fallback) {
     return typeof input === "string" && allowed.includes(input) ? input : fallback;

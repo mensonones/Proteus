@@ -18,6 +18,9 @@ Inspirado por frameworks de 2025/2026 como o *OpenAnt* e o *ProjectDiscovery Neo
 - Evita danos acidentais aos servidores de produção da target (visto que o sandbox seria um espelho enxuto gerado a partir do código fonte analisado).
 - Eleva o *confidence level* do reporte gerado para próximo de 100%, economizando horas de triagem humana na tentativa de reproduzir configurações peculiares localmente.
 
+> [!NOTE]
+> **Status:** ✅ **Implementado** (Arquitetura atualizada: `proteus-cicada.md` e `poc-exploit` agora forçam a geração e execução do sandbox).
+
 ---
 
 ## 0-Day Discovery Agent (Agente "Maverick")
@@ -35,3 +38,6 @@ Os LLMs atuais são exímios no reconhecimento de padrões (ex: identificar um X
 
 **Benefícios Esperados:**
 - Permite que o Proteus escale para descobrir falhas estruturais massivas (frequentemente as mais bem pagas em Bug Bounty) sem poluir a eficácia dos agentes focados na caça a N-days.
+
+> [!NOTE]
+> **Status:** ✅ **Implementado** (Agente `proteus-maverick` instanciado com isolamento de prompt focado em Lateral Thinking; skill de setup `zero-day-maverick` integrada ao comando unificado).

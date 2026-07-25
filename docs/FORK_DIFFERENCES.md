@@ -25,5 +25,8 @@ Unlike the root repo, this fork ships with advanced, proprietary local skills ta
 - **Skills:** `maintainability-review`, `logic-and-edge-case-review`, `defensive-security-review`, `performance-scale-review`, and `full-review`.
 - **`install:all-skills` Script:** Added to `package.json` to seamlessly deploy these custom skills across all local AI assistant environments (Codex, OpenCode, Claude Code) in a single command, streamlining onboarding for the research team.
 
-## 5. Agentic Sandbox Roadmap
-This fork includes an active `ROADMAP.md` tracking the future evolution of the `Cicada` agent to incorporate **Ephemeral Exploit Sandboxes** (Docker), moving from static code exploitation to 100% isolated, autonomous runtime verification.
+## 5. Agentic Exploit Sandbox (Cicada)
+This fork modifies the **Cicada** agent and the `poc-exploit` skill to enforce 100% autonomous runtime verification. Instead of just static exploits, the agent now mandates the generation of a `docker-compose.yml` to spin up a fully isolated, ephemeral lab modeling the target. The exploit is executed in this 512MB RAM-limited sandbox, and the runtime output acts as irrevocable proof to disarm the Skeptic gate.
+
+## 6. 0-Day Discovery Agent (Maverick)
+To combat "Prompt Schizophrenia" when hunting for novel vulnerabilities, this fork introduces the **`proteus-maverick`** agent. Operating under strict prompt isolation, Maverick ignores all standard OWASP bugs and technical injections. Its sole directive is to apply First Principles and Lateral Thinking to abuse legitimate features and break the business logic state machine, feeding 0-day theories directly to the Skeptic for validation.

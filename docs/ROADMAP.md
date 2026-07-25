@@ -17,3 +17,21 @@ Inspirado por frameworks de 2025/2026 como o *OpenAnt* e o *ProjectDiscovery Neo
 **Benefícios Esperados:**
 - Evita danos acidentais aos servidores de produção da target (visto que o sandbox seria um espelho enxuto gerado a partir do código fonte analisado).
 - Eleva o *confidence level* do reporte gerado para próximo de 100%, economizando horas de triagem humana na tentativa de reproduzir configurações peculiares localmente.
+
+---
+
+## 0-Day Discovery Agent (Agente "Maverick")
+
+**Objetivo:** Introduzir um agente dedicado exclusivamente à descoberta de vulnerabilidades lógicas inéditas e 0-days (*Lateral Thinking* e *First Principles*), sem sofrer de "Esquizofrenia de Prompt" ao tentar encontrar bugs convencionais.
+
+**Contexto e Motivação:**
+Os LLMs atuais são exímios no reconhecimento de padrões (ex: identificar um XSS ou SQLi clássico). No entanto, forçá-los a procurar bugs tradicionais *e* pensar de forma criativa/absurda no mesmo prompt gera degradação na qualidade da análise. Para encontrar falhas de lógica de negócios severas ou encadeamentos imprevistos (0-days), é necessário um escopo de análise que ignore totalmente o OWASP Top 10 e foque puramente na manipulação de Invariantes e Máquinas de Estado do alvo.
+
+**Proposta de Implementação (Conceito):**
+- Criar um novo especialista paralelo na suíte Chimera (ex: `proteus-maverick`).
+- **Prompt Isolation:** O *Maverick* será instruído a assumir que o código é 100% seguro contra injeções técnicas. Sua única missão é propor teorias de abuso de features (*Feature Abuse Chaining*) e fluxos ilógicos.
+- **Integração com o Coordinator:** Na mesma rodada (Round), o Coordenador delegará a análise de código para a Força-Tarefa padrão (Argus, Loom, Chaos) para varredura de falhas técnicas, e para o *Maverick* para análise puramente lógica.
+- **Validação Cruzada:** As teorias "insanas" do *Maverick* serão enviadas diretamente ao agente *Skeptic* (Devil's Advocate), que as submeterá aos rigorosos 11 Gates do Proteus. Apenas teorias lógicas sólidas que provarem impacto e viabilidade chegarão ao relatório final.
+
+**Benefícios Esperados:**
+- Permite que o Proteus escale para descobrir falhas estruturais massivas (frequentemente as mais bem pagas em Bug Bounty) sem poluir a eficácia dos agentes focados na caça a N-days.

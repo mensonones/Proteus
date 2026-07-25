@@ -28,8 +28,9 @@ capability, and kill conditions.
    realistic attacker actions.
 5. Design the smallest probe that can prove or kill each bypass. Use fuzzing
    only when the branch needs calibrated input-reaction learning.
-6. Define reliability and failure modes before PoC. If the chain only works
-   because the lab helps, kill or downgrade it.
+6. **Agentic Exploit Sandbox (Mandatory Verification):** If a bypass or chain theory is mature, you MUST generate an ephemeral Sandbox (`docker-compose.yml`) modeling the target component.
+7. Develop the exploit script (`exploit.py` or `exploit.sh`) and execute it against the Sandbox. The runtime execution output (stdout/stderr) acts as irrevocable evidence.
+8. Define reliability and failure modes. If the chain only works because the lab helps, kill or downgrade it. If the Sandbox execution succeeds, the output will automatically disarm the Skeptic (Gate 11).
 
 ## Anti-Patterns
 

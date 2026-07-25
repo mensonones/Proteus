@@ -9,6 +9,9 @@
   Map real codebases, preserve research memory, delegate specialist fronts, and validate exploitability with disciplined gates.
 </p>
 
+> [!IMPORTANT]
+> **Custom Fork:** This is a locally customized fork optimized for operational security and deep code review. See [docs/FORK_DIFFERENCES.md](docs/FORK_DIFFERENCES.md) for details on Ephemeral Tor, Cross-Wave Delta Tracking, and Custom Skills.
+
 <p align="center">
   <a href="#install">Install</a> &bull;
   <a href="#quick-start">Quick Start</a> &bull;

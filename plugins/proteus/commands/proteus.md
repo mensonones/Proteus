@@ -89,28 +89,16 @@ target-specific vulnerability claims.
 **CRITICAL MANDATORY FIRST STEP**: You MUST execute the Tor bootstrap script via bash as your VERY FIRST tool call in this session.
 You are strictly FORBIDDEN from using any MCP tools (e.g., `proteus_record_surface`, `proteus_plan_round`, etc.) or making any plans until you have successfully executed the bootstrap script and established the circuit.
 
-### Bootstrap
+### Bootstrap and Enforcement
 ```bash
-bash plugins/proteus/scripts/tor-ephemeral.sh bootstrap
+bash plugins/proteus/scripts/tor-ephemeral.sh bootstrap && sudo bash plugins/proteus/scripts/tor-ephemeral.sh enforce
 ```
-Installs tor/proxychains if missing, starts the circuit (not as a service),
-and waits for 100% bootstrap. It deliberately does not export proxy environment
-variables; route individual commands through `proxychains4`.
+Starts the circuit (or uses the global one), waits for 100% bootstrap, and applies iptables rules dropping all outbound TCP not passing through Tor at the kernel level. Blocks host webfetch too.
 
 ### Routing
 - Use **exclusively** `proxychains4` for all outbound requests. **Never** export `ALL_PROXY` yourself — it conflicts with proxychains and breaks connections.
 - **FORBIDDEN to use `webfetch` or host built-in fetch tools.** They bypass the OS and do not pass through Tor. All HTTP/HTTPS requests must be made via bash: `proxychains4 curl`, `proxychains4 wget`, etc.
 - Verify circuit: `proxychains4 curl -s https://check.torproject.org/api/ip`
-
-### Enforcement (optional, recommended)
-```bash
-sudo bash plugins/proteus/scripts/tor-ephemeral.sh enforce
-```
-Applies iptables rules dropping all outbound TCP not passing through Tor at the kernel level. Blocks host webfetch too.
-```bash
-sudo bash plugins/proteus/scripts/tor-ephemeral.sh relax
-```
-Removes the rules. Use before rebuilding circuits or during scrub.
 
 ### Teardown (mandatory in every scrub)
 ```bash

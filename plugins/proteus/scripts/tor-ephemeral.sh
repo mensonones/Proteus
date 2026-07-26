@@ -13,35 +13,10 @@ install_tor() {
     log "tor and proxychains4 binaries found"
     return 0
   fi
-  log "tor or proxychains4 not found, installing temporarily..."
   
-  if ! sudo -n true 2>/dev/null; then
-    log "ERROR: sudo requires a password, but we cannot prompt for it in this environment."
-    log "       Please run this command manually in your terminal, or configure passwordless sudo."
-    return 1
-  fi
-
-  local installed=0
-  if command -v apt-get &>/dev/null; then
-    sudo apt-get update -qq && sudo apt-get install -y -qq tor proxychains4 && installed=1
-  elif command -v dnf &>/dev/null; then
-    sudo dnf install -y tor proxychains && installed=1
-  elif command -v pacman &>/dev/null; then
-    sudo pacman -S --noconfirm tor proxychains-ng && installed=1
-  elif command -v brew &>/dev/null; then
-    brew install tor proxychains-ng && installed=1
-  fi
-  if [ "$installed" -eq 0 ]; then
-    log "ERROR: failed to install tor. Check sudo/package manager."
-    return 1
-  fi
-  # Kill any systemd service that may have auto-started
-  sudo systemctl stop tor 2>/dev/null || true
-  sudo systemctl disable tor 2>/dev/null || true
-  if ! command -v tor &>/dev/null; then
-    log "ERROR: tor binary still not found after install attempt"
-    return 1
-  fi
+  log "WARNING: tor or proxychains4 not found."
+  log "Automatic package installation is disabled. Proceeding without attempting to install."
+  return 1
 }
 
 start_ephemeral() {
@@ -128,21 +103,7 @@ stop_ephemeral() {
 purge_tor() {
   relax_enforcement 2>/dev/null || true
   log "purging tor package..."
-  if ! sudo -n true 2>/dev/null; then
-    log "ERROR: sudo requires a password, but we cannot prompt for it in this environment."
-    log "       Please run this command manually in your terminal."
-    return 1
-  fi
-  if command -v apt-get &>/dev/null; then
-    sudo apt-get purge -y -qq tor proxychains4 2>/dev/null || true
-    sudo apt-get autoremove -y -qq 2>/dev/null || true
-  elif command -v dnf &>/dev/null; then
-    sudo dnf remove -y tor proxychains 2>/dev/null || true
-  elif command -v pacman &>/dev/null; then
-    sudo pacman -Rns --noconfirm tor proxychains-ng 2>/dev/null || true
-  elif command -v brew &>/dev/null; then
-    brew uninstall tor proxychains-ng 2>/dev/null || true
-  fi
+  log "Automatic package removal is disabled."
 }
 
 CHAIN="PROTEUS_TOR_ENFORCE"

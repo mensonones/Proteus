@@ -5,10 +5,10 @@
   "author": {
     "name": "Vyntra Research",
     "email": "rbd.sye@gmail.com",
-    "url": "https://github.com/Vyntra-Research"
+    "url": "https://github.com/mensonones"
   },
-  "homepage": "https://github.com/Vyntra-Research/Proteus",
-  "repository": "https://github.com/Vyntra-Research/Proteus",
+  "homepage": "https://github.com/mensonones/Proteus",
+  "repository": "https://github.com/mensonones/Proteus",
   "license": "GPL-3.0-or-later",
   "keywords": [
     "security-research",
@@ -38,9 +38,9 @@
       "Write",
       "Run"
     ],
-    "websiteURL": "https://github.com/Vyntra-Research/Proteus",
-    "privacyPolicyURL": "https://github.com/Vyntra-Research/Proteus",
-    "termsOfServiceURL": "https://github.com/Vyntra-Research/Proteus",
+    "websiteURL": "https://github.com/mensonones/Proteus",
+    "privacyPolicyURL": "https://github.com/mensonones/Proteus",
+    "termsOfServiceURL": "https://github.com/mensonones/Proteus",
     "defaultPrompt": [
       "Initialize continuous vulnerability research for this codebase.",
       "Plan the next high-ROI offensive research round.",

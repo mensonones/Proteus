@@ -14,6 +14,13 @@ install_tor() {
     return 0
   fi
   log "tor or proxychains4 not found, installing temporarily..."
+  
+  if ! sudo -n true 2>/dev/null; then
+    log "ERROR: sudo requires a password, but we cannot prompt for it in this environment."
+    log "       Please run this command manually in your terminal, or configure passwordless sudo."
+    return 1
+  fi
+
   local installed=0
   if command -v apt-get &>/dev/null; then
     sudo apt-get update -qq && sudo apt-get install -y -qq tor proxychains4 && installed=1
@@ -38,6 +45,12 @@ install_tor() {
 }
 
 start_ephemeral() {
+  # Check if a global Tor service is already listening and working on the specified port
+  if proxychains4 -q curl -s --max-time 10 https://check.torproject.org/api/ip 2>/dev/null | grep -qi '"IsTor":\s*true'; then
+    log "System Tor is already active on port $TOR_SOCKS_PORT. Using global service."
+    return 0
+  fi
+
   if [ -f "$TOR_PID_FILE" ]; then
     local existing_pid
     existing_pid=$(cat "$TOR_PID_FILE" 2>/dev/null || true)
@@ -115,6 +128,11 @@ stop_ephemeral() {
 purge_tor() {
   relax_enforcement 2>/dev/null || true
   log "purging tor package..."
+  if ! sudo -n true 2>/dev/null; then
+    log "ERROR: sudo requires a password, but we cannot prompt for it in this environment."
+    log "       Please run this command manually in your terminal."
+    return 1
+  fi
   if command -v apt-get &>/dev/null; then
     sudo apt-get purge -y -qq tor proxychains4 2>/dev/null || true
     sudo apt-get autoremove -y -qq 2>/dev/null || true
@@ -130,7 +148,7 @@ purge_tor() {
 CHAIN="PROTEUS_TOR_ENFORCE"
 
 enforce_kernel() {
-  require_root "enforce"
+  require_root "enforce" || return 1
   # Idempotent: flush chain if it exists, then recreate
   sudo iptables -D OUTPUT -j "$CHAIN" 2>/dev/null || true
   sudo iptables -F "$CHAIN" 2>/dev/null || true
@@ -151,7 +169,7 @@ enforce_kernel() {
 }
 
 relax_enforcement() {
-  require_root "relax"
+  require_root "relax" || return 1
   sudo iptables -D OUTPUT -j "$CHAIN" 2>/dev/null || true
   sudo iptables -F "$CHAIN" 2>/dev/null || true
   sudo iptables -X "$CHAIN" 2>/dev/null || true

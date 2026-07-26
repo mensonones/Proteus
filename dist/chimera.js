@@ -112,7 +112,7 @@ function chimeraDoctor(db) {
             detail: resolveSkillsDir() ?? "Could not resolve plugins/proteus/skills."
         },
         commandIntegrity,
-        commandCheck("opencode", config.opencodeCommand, ["--version"]),
+        openCodeAvailabilityCheck(config.opencodeCommand),
         commandCheck("proteus_cli", process.execPath, [resolveProteusCliPath(), "--version"])
     ];
     return { ok: checks.every((check) => check.ok), config, checks };
@@ -909,7 +909,7 @@ function snapshotChimeraWorkflow(db, publicId, input = {}) {
     }
     const limit = Math.max(1, Math.min(50, positiveInteger(input.limit, 8)));
     const maxMessageChars = Math.max(80, Math.min(8000, positiveInteger(input.maxMessageChars, 1200)));
-    const command = commandParts(session.opencodeCommand || getChimeraConfig().opencodeCommand);
+    const command = commandParts(resolveOpenCodeCommand(session.opencodeCommand || getChimeraConfig().opencodeCommand));
     const attempts = [];
     let result = null;
     let stdout = "";
@@ -1121,7 +1121,7 @@ function runOpenCodeOnce(db, session, promptPath, config, timeoutSec, finalInstr
         args.push("--dangerously-skip-permissions");
     args.push(finalInstruction ?? `Run the attached Proteus Chimera dossier for ${session.publicId}. Start by loading available Proteus skills if the skill tool is available, then execute only the assigned goal. Poll Proteus messages before long work and post a concise final snapshot.`);
     const startedAt = new Date().toISOString();
-    const command = commandParts(config.opencodeCommand);
+    const command = commandParts(resolveOpenCodeCommand(config.opencodeCommand));
     const killPath = node_path_1.default.join(session.sessionDir, "kill.flag");
     const pidPath = node_path_1.default.join(opencodeDir, "opencode.pid");
     const runEnv = {
@@ -2374,7 +2374,7 @@ function startOpenCodeServerProcess(db, config, port) {
     (0, paths_1.ensureDir)((0, paths_1.chimeraDir)(db.targetRoot));
     const stdout = node_fs_1.default.openSync(node_path_1.default.join((0, paths_1.chimeraDir)(db.targetRoot), "opencode-server.stdout.log"), "a");
     const stderr = node_fs_1.default.openSync(node_path_1.default.join((0, paths_1.chimeraDir)(db.targetRoot), "opencode-server.stderr.log"), "a");
-    const command = commandParts(config.opencodeCommand);
+    const command = commandParts(resolveOpenCodeCommand(config.opencodeCommand));
     const child = (0, node_child_process_1.spawn)(command.file, [...command.args, "serve", "--hostname", "127.0.0.1", "--port", String(port)], {
         cwd: db.targetRoot,
         detached: process.platform !== "win32",
@@ -2530,6 +2530,26 @@ function commandCheck(name, command, args) {
         detail: output || result.error?.message || `exit ${result.status}`
     };
 }
+function openCodeAvailabilityCheck(configuredCommand) {
+    const primary = commandCheck("opencode", configuredCommand, ["--version"]);
+    if (primary.ok)
+        return primary;
+    if (configuredCommand.trim() === OPENCODE_CLI_FALLBACK_COMMAND)
+        return primary;
+    const fallback = commandCheck("opencode", OPENCODE_CLI_FALLBACK_COMMAND, ["--version"]);
+    if (fallback.ok) {
+        return {
+            name: "opencode",
+            ok: true,
+            detail: `Configured command "${configuredCommand}" is not usable headless (${primary.detail}). Falling back to CLI "${OPENCODE_CLI_FALLBACK_COMMAND}": ${fallback.detail}`
+        };
+    }
+    return {
+        name: "opencode",
+        ok: false,
+        detail: `Neither the configured command "${configuredCommand}" (${primary.detail}) nor the CLI fallback "${OPENCODE_CLI_FALLBACK_COMMAND}" (${fallback.detail}) responded to --version.`
+    };
+}
 function openCodeCommandIntegrityCheck(command) {
     const allowed = !isMockOpenCodeCommand(command) || process.env.PROTEUS_ALLOW_MOCK_OPENCODE === "1";
     return {
@@ -2547,6 +2567,28 @@ function assertOpenCodeCommandAllowed(command) {
 }
 function isMockOpenCodeCommand(command) {
     return /(?:^|[\\/])mock-opencode(?:\.[a-z0-9]+)?(?:\s|$|["'])/i.test(command.trim());
+}
+const OPENCODE_CLI_FALLBACK_COMMAND = "opencode";
+let resolvedOpenCodeCommandCache = null;
+/**
+ * Some configured opencodeCommand values (e.g. the ai.opencode.desktop GUI
+ * launcher) cannot run headless and fail with no usable output when spawned
+ * on a server without a display. When that happens, fall back to the plain
+ * "opencode" CLI, which supports headless `serve`/`run`/`export`.
+ */
+function resolveOpenCodeCommand(configuredCommand) {
+    if (resolvedOpenCodeCommandCache && resolvedOpenCodeCommandCache.input === configuredCommand) {
+        return resolvedOpenCodeCommandCache.resolved;
+    }
+    const candidates = [configuredCommand, OPENCODE_CLI_FALLBACK_COMMAND].filter((value, index, array) => value.trim() && array.indexOf(value) === index);
+    for (const candidate of candidates) {
+        if (commandCheck("opencode_probe", candidate, ["--version"]).ok) {
+            resolvedOpenCodeCommandCache = { input: configuredCommand, resolved: candidate };
+            return candidate;
+        }
+    }
+    resolvedOpenCodeCommandCache = { input: configuredCommand, resolved: configuredCommand };
+    return configuredCommand;
 }
 function commandParts(command) {
     const trimmed = command.trim();

@@ -102,13 +102,13 @@ Starts the circuit (or uses the global one), waits for 100% bootstrap, and appli
 
 ### Teardown (mandatory in every scrub)
 ```bash
-bash plugins/proteus/scripts/tor-ephemeral.sh stop
+sudo bash plugins/proteus/scripts/tor-ephemeral.sh stop
 ```
 Kills process, deletes `/tmp/tor-ephemeral`, removes iptables, unsets env vars.
 
 ### Full Purge (end of campaign)
 ```bash
-bash plugins/proteus/scripts/tor-ephemeral.sh purge
+sudo bash plugins/proteus/scripts/tor-ephemeral.sh purge
 ```
 stop + apt-get purge tor proxychains4 (removes from system).
 
@@ -127,8 +127,8 @@ Before every return or handoff, all agents must actively clean up traces:
 6. Remove any file written outside `.vros/` (reports, labs, logs).
 7. Confirm no proxy env vars (`ALL_PROXY`, `HTTP_PROXY`, `HTTPS_PROXY`) remain set.
 8. **Kill Tor process and delete `/tmp/tor-ephemeral`.** Use the script:
-   `bash plugins/proteus/scripts/tor-ephemeral.sh stop`. At the end of the campaign:
-   `bash plugins/proteus/scripts/tor-ephemeral.sh purge` (removes packages too).
+   `sudo bash plugins/proteus/scripts/tor-ephemeral.sh stop`. At the end of the campaign:
+   `sudo bash plugins/proteus/scripts/tor-ephemeral.sh purge` (removes packages too).
 
 Keep research artifacts only inside `.vros/`. Never commit research output to
 public repositories. Agents failing to scrub before returning are non-compliant

@@ -33,7 +33,7 @@ Os LLMs atuais são exímios no reconhecimento de padrões (ex: identificar um X
 **Proposta de Implementação (Conceito):**
 - Criar um novo especialista paralelo na suíte Chimera (ex: `proteus-maverick`).
 - **Prompt Isolation:** O *Maverick* será instruído a assumir que o código é 100% seguro contra injeções técnicas. Sua única missão é propor teorias de abuso de features (*Feature Abuse Chaining*) e fluxos ilógicos.
-- **Integração com o Coordinator:** Na mesma rodada (Round), o Coordenador delegará a análise de código para a Força-Tarefa padrão (Argus, Loom, Chaos) para varredura de falhas técnicas, e para o *Maverick* para análise puramente lógica.
+- **Integração com o Coordinator:** Em vez de rodar em paralelo no início, o Coordenador delegará a análise para o *Maverick* num Round subsequente (Round 2 / Replan), alimentando-o com o mapa de Invariants e Regras de Negócio consolidados pelos agentes Libris e Argus no Round 1.
 - **Validação Cruzada:** As teorias "insanas" do *Maverick* serão enviadas diretamente ao agente *Skeptic* (Devil's Advocate), que as submeterá aos rigorosos 11 Gates do Proteus. Apenas teorias lógicas sólidas que provarem impacto e viabilidade chegarão ao relatório final.
 
 **Benefícios Esperados:**

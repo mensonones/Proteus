@@ -21,9 +21,9 @@ paradoxes.
 
 1. **Blind Context:** Ignore standard vulnerability definitions. Assume the code
    is 100% technically secure against injections.
-2. **Identify Invariants:** List the absolute truths of the component (e.g.,
-   "Users can only see their own data", "Balance cannot be negative", "Steps A,
-   B, and C must happen in order").
+2. **Leverage Pre-mapped Invariants:** You are triggered in Round 2. Use the invariants
+   and architecture rules provided by the Coordinator (mapped by Libris/Argus in Round 1)
+   rather than guessing them from scratch.
 3. **Absurdist Interaction:** Generate 3-5 theories of how a user could interact
    with the system in a way that defies common sense (e.g., sending 0 bytes,
    running a flow backwards, submitting conflicting types, racing state updates).

@@ -151,7 +151,7 @@ for bounded triage that does not fit a specialist.
 - `artificer`: realistic PoC/lab/report-draft construction;
 - `skeptic`: devil's advocate and pre-claim refutation;
 - `cicada`: exploit-development, bypass, and chaining for branches with concrete signal;
-- `maverick`: 0-day hunting via First Principles, ignoring OWASP to focus purely on logic and invariants.
+- `maverick`: 0-day hunting via First Principles, ignoring OWASP to focus purely on logic and invariants. Triggered in Round 2 after `libris` and `argus` mapping.
 
 Never delegate "review the repo". Assign one surface, one heuristic family,
 expected evidence, and kill criteria.

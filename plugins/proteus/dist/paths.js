@@ -12,6 +12,7 @@ exports.chimeraDir = chimeraDir;
 exports.chimeraSessionsDir = chimeraSessionsDir;
 exports.chimeraSessionDir = chimeraSessionDir;
 exports.globalVrosDir = globalVrosDir;
+exports.openCodeGlobalConfigDir = openCodeGlobalConfigDir;
 exports.globalMemoryPath = globalMemoryPath;
 exports.globalExportsDir = globalExportsDir;
 exports.globalChimeraDir = globalChimeraDir;
@@ -47,6 +48,17 @@ function chimeraSessionDir(targetRoot, publicId) {
 }
 function globalVrosDir() {
     return node_path_1.default.join(node_os_1.default.homedir(), ".vros");
+}
+function openCodeGlobalConfigDir() {
+    if (process.env.PROTEUS_OPENCODE_GLOBAL_DIR) {
+        return node_path_1.default.resolve(process.env.PROTEUS_OPENCODE_GLOBAL_DIR);
+    }
+    if (process.platform === "win32") {
+        const appData = process.env.APPDATA ?? node_path_1.default.join(node_os_1.default.homedir(), "AppData", "Roaming");
+        return node_path_1.default.join(appData, "opencode");
+    }
+    const xdgConfigHome = process.env.XDG_CONFIG_HOME ?? node_path_1.default.join(node_os_1.default.homedir(), ".config");
+    return node_path_1.default.join(xdgConfigHome, "opencode");
 }
 function globalMemoryPath() {
     if (process.env.PROTEUS_GLOBAL_MEMORY_PATH) {

@@ -1,12 +1,18 @@
-import { execFileSync, execSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-import { ensureDir } from "./paths";
+import { ensureDir, openCodeGlobalConfigDir, toRelative } from "./paths";
 
 type JsonObject = Record<string, unknown>;
 
 export interface OpenCodeInstallOptions {
   force?: boolean;
+  /**
+   * Install into OpenCode's user-level config directory (flat layout, no
+   * `.opencode/` nesting) instead of a project root. This is the only
+   * supported way to make Proteus available across every OpenCode workspace;
+   * `--root` is ignored when this is set.
+   */
+  global?: boolean;
 }
 
 export interface OpenCodeInstallResult {
@@ -20,11 +26,6 @@ export interface OpenCodeInstallResult {
 
 export interface OpenCodeDoctorResult {
   root: string;
-  opencode: {
-    found: boolean;
-    version?: string;
-    error?: string;
-  };
   config: {
     path: string;
     exists: boolean;
@@ -93,8 +94,9 @@ const SKILL_ALIASES = [
   }
 ];
 
-export function installOpenCodeSupport(root: string, options: OpenCodeInstallOptions = {}): OpenCodeInstallResult {
-  const targetRoot = path.resolve(root);
+export function installOpenCodeSupport(root: string | undefined, options: OpenCodeInstallOptions = {}): OpenCodeInstallResult {
+  const targetRoot = options.global ? openCodeGlobalConfigDir() : path.resolve(root ?? process.cwd());
+  const assetsRoot = options.global ? targetRoot : path.join(targetRoot, ".opencode");
   const result: OpenCodeInstallResult = {
     root: targetRoot,
     configPath: path.join(targetRoot, "opencode.json"),
@@ -104,23 +106,22 @@ export function installOpenCodeSupport(root: string, options: OpenCodeInstallOpt
     advisories: []
   };
   ensureDir(targetRoot);
-  installOpenCodeConfig(targetRoot, result, options);
-  installOpenCodeInstructions(targetRoot, result, options);
-  installOpenCodeCommand(targetRoot, result, options);
-  installOpenCodeSkills(targetRoot, result, options);
-  installOpenCodeAgents(targetRoot, result, options);
-  installOpenCodeTemplates(targetRoot, result, options);
+  installOpenCodeConfig(targetRoot, assetsRoot, result, options);
+  installOpenCodeInstructions(assetsRoot, result, options);
+  installOpenCodeCommand(assetsRoot, result, options);
+  installOpenCodeSkills(assetsRoot, result, options);
+  installOpenCodeAgents(assetsRoot, result, options);
+  installOpenCodeTemplates(assetsRoot, result, options);
   return result;
 }
 
-export function doctorOpenCodeSupport(root: string): OpenCodeDoctorResult {
-  const targetRoot = path.resolve(root);
+export function doctorOpenCodeSupport(root: string | undefined, options: { global?: boolean } = {}): OpenCodeDoctorResult {
+  const targetRoot = options.global ? openCodeGlobalConfigDir() : path.resolve(root ?? process.cwd());
+  const assetsRoot = options.global ? targetRoot : path.join(targetRoot, ".opencode");
   const configPath = path.join(targetRoot, "opencode.json");
   const configRead = readJsonConfig(configPath);
-  const opencode = detectOpenCode();
   const result: OpenCodeDoctorResult = {
     root: targetRoot,
-    opencode,
     config: {
       path: configPath,
       exists: fs.existsSync(configPath),
@@ -129,16 +130,16 @@ export function doctorOpenCodeSupport(root: string): OpenCodeDoctorResult {
       hasProteusInstructions: hasProteusInstructions(configRead.value)
     },
     assets: {
-      commands: listNames(path.join(targetRoot, ".opencode", "commands"), ".md"),
-      agents: listNames(path.join(targetRoot, ".opencode", "agents"), ".md"),
-      skills: listSkillNames(path.join(targetRoot, ".opencode", "skills")),
-      templates: listNames(path.join(targetRoot, ".opencode", "templates"))
+      commands: listNames(path.join(assetsRoot, "commands"), ".md"),
+      agents: listNames(path.join(assetsRoot, "agents"), ".md"),
+      skills: listSkillNames(path.join(assetsRoot, "skills")),
+      templates: listNames(path.join(assetsRoot, "templates"))
     },
     ok: false,
     advisories: []
   };
-  if (!opencode.found) result.advisories.push("OpenCode CLI was not found on PATH.");
-  if (!result.config.exists) result.advisories.push("opencode.json is missing. Run `proteus opencode install --root <path>`.");
+  const installHint = options.global ? "proteus opencode install --global" : "proteus opencode install --root <path>";
+  if (!result.config.exists) result.advisories.push(`opencode.json is missing. Run \`${installHint}\`.`);
   if (result.config.exists && !result.config.validJson) result.advisories.push("opencode.json is not valid JSON. Proteus will not modify JSONC/commented configs automatically.");
   if (!result.config.hasProteusMcp) result.advisories.push("opencode.json does not enable the Proteus MCP server.");
   if (!result.config.hasProteusInstructions) result.advisories.push("opencode.json does not reference the Proteus OpenCode instructions.");
@@ -146,11 +147,11 @@ export function doctorOpenCodeSupport(root: string): OpenCodeDoctorResult {
     if (!result.assets.skills.includes(required)) result.advisories.push(`Missing OpenCode skill: ${required}`);
   }
   if (!result.assets.commands.includes("proteus")) result.advisories.push("Missing OpenCode command: /proteus");
-  result.ok = opencode.found && result.config.validJson && result.config.hasProteusMcp && result.config.hasProteusInstructions && result.advisories.length === 0;
+  result.ok = result.config.validJson && result.config.hasProteusMcp && result.config.hasProteusInstructions && result.advisories.length === 0;
   return result;
 }
 
-function installOpenCodeConfig(targetRoot: string, result: OpenCodeInstallResult, options: OpenCodeInstallOptions): void {
+function installOpenCodeConfig(targetRoot: string, assetsRoot: string, result: OpenCodeInstallResult, options: OpenCodeInstallOptions): void {
   const configPath = path.join(targetRoot, "opencode.json");
   const existing = readJsonConfig(configPath);
   if (fs.existsSync(configPath) && !existing.ok) {
@@ -167,8 +168,9 @@ function installOpenCodeConfig(targetRoot: string, result: OpenCodeInstallResult
     enabled: true,
     timeout: 15000
   };
+  const instructionsPath = toRelative(targetRoot, path.join(assetsRoot, "instructions", "proteus.md"));
   const instructions = Array.isArray(config.instructions) ? config.instructions.filter((item): item is string => typeof item === "string") : [];
-  if (!instructions.includes(".opencode/instructions/proteus.md")) instructions.push(".opencode/instructions/proteus.md");
+  if (!instructions.includes(instructionsPath)) instructions.push(instructionsPath);
   config.instructions = instructions;
   config.permission = isObject(config.permission) ? config.permission : {};
   (config.permission as JsonObject).skill = isObject((config.permission as JsonObject).skill) ? (config.permission as JsonObject).skill : {};
@@ -176,7 +178,7 @@ function installOpenCodeConfig(targetRoot: string, result: OpenCodeInstallResult
   writeManagedFile(configPath, `${JSON.stringify(config, null, 2)}\n`, result, options);
 }
 
-function installOpenCodeInstructions(targetRoot: string, result: OpenCodeInstallResult, options: OpenCodeInstallOptions): void {
+function installOpenCodeInstructions(assetsRoot: string, result: OpenCodeInstallResult, options: OpenCodeInstallOptions): void {
   const instructions = `# Proteus OpenCode Runtime
 
 Proteus is available in this OpenCode project through:
@@ -188,18 +190,18 @@ Proteus is available in this OpenCode project through:
 
 When the user asks for Proteus research, load the \`proteus\` skill first. Use the specialist skills only when the current branch needs that specific method. Prefer MCP tools when available, and fall back to the \`proteus\` CLI when a tool is unavailable.
 `;
-  writeManagedFile(path.join(targetRoot, ".opencode", "instructions", "proteus.md"), instructions, result, options);
+  writeManagedFile(path.join(assetsRoot, "instructions", "proteus.md"), instructions, result, options);
 }
 
-function installOpenCodeCommand(targetRoot: string, result: OpenCodeInstallResult, options: OpenCodeInstallOptions): void {
+function installOpenCodeCommand(assetsRoot: string, result: OpenCodeInstallResult, options: OpenCodeInstallOptions): void {
   const source = path.join(proteusPluginRoot(), "commands", "proteus.md");
   const command = fs.existsSync(source)
     ? fs.readFileSync(source, "utf8")
     : `---\ndescription: Run Proteus continuous vulnerability research for the current target.\n---\n\nLoad the proteus skill and run the coordinator workflow for: $ARGUMENTS\n`;
-  writeManagedFile(path.join(targetRoot, ".opencode", "commands", "proteus.md"), command, result, options);
+  writeManagedFile(path.join(assetsRoot, "commands", "proteus.md"), command, result, options);
 }
 
-function installOpenCodeSkills(targetRoot: string, result: OpenCodeInstallResult, options: OpenCodeInstallOptions): void {
+function installOpenCodeSkills(assetsRoot: string, result: OpenCodeInstallResult, options: OpenCodeInstallOptions): void {
   const skillsRoot = path.join(proteusPluginRoot(), "skills");
   for (const alias of SKILL_ALIASES) {
     const source = path.join(skillsRoot, alias.source, "SKILL.md");
@@ -208,28 +210,28 @@ function installOpenCodeSkills(targetRoot: string, result: OpenCodeInstallResult
       continue;
     }
     const content = rewriteSkillFrontmatter(fs.readFileSync(source, "utf8"), alias.target, alias.description);
-    writeManagedFile(path.join(targetRoot, ".opencode", "skills", alias.target, "SKILL.md"), content, result, options);
+    writeManagedFile(path.join(assetsRoot, "skills", alias.target, "SKILL.md"), content, result, options);
   }
 }
 
-function installOpenCodeAgents(targetRoot: string, result: OpenCodeInstallResult, options: OpenCodeInstallOptions): void {
+function installOpenCodeAgents(assetsRoot: string, result: OpenCodeInstallResult, options: OpenCodeInstallOptions): void {
   const agentsRoot = path.join(proteusPluginRoot(), "agents");
   if (!fs.existsSync(agentsRoot)) return;
   for (const entry of fs.readdirSync(agentsRoot, { withFileTypes: true })) {
     if (!entry.isFile() || !entry.name.endsWith(".md")) continue;
     const source = path.join(agentsRoot, entry.name);
     const content = rewriteAgentFrontmatter(fs.readFileSync(source, "utf8"));
-    writeManagedFile(path.join(targetRoot, ".opencode", "agents", entry.name), content, result, options);
+    writeManagedFile(path.join(assetsRoot, "agents", entry.name), content, result, options);
   }
 }
 
-function installOpenCodeTemplates(targetRoot: string, result: OpenCodeInstallResult, options: OpenCodeInstallOptions): void {
+function installOpenCodeTemplates(assetsRoot: string, result: OpenCodeInstallResult, options: OpenCodeInstallOptions): void {
   const templatesRoot = path.join(proteusPluginRoot(), "templates");
   if (!fs.existsSync(templatesRoot)) return;
   for (const entry of fs.readdirSync(templatesRoot, { withFileTypes: true })) {
     if (!entry.isFile()) continue;
     const source = path.join(templatesRoot, entry.name);
-    writeManagedFile(path.join(targetRoot, ".opencode", "templates", entry.name), fs.readFileSync(source, "utf8"), result, options);
+    writeManagedFile(path.join(assetsRoot, "templates", entry.name), fs.readFileSync(source, "utf8"), result, options);
   }
 }
 
@@ -290,21 +292,6 @@ function readJsonConfig(filePath: string): { ok: true; value: JsonObject | null 
   }
 }
 
-function detectOpenCode(): OpenCodeDoctorResult["opencode"] {
-  const command = process.env.OPENCODE_COMMAND?.trim() || "opencode";
-  try {
-    const version = execFileSync(command, ["--version"], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
-    return { found: true, version };
-  } catch (firstError) {
-    try {
-      const version = execSync(`${quoteShellCommand(command)} --version`, { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
-      return { found: true, version };
-    } catch {
-      return { found: false, error: firstError instanceof Error ? firstError.message : String(firstError) };
-    }
-  }
-}
-
 function hasProteusMcp(config: JsonObject | null): boolean {
   if (!config || !isObject(config.mcp)) return false;
   const proteus = config.mcp.proteus;
@@ -312,7 +299,10 @@ function hasProteusMcp(config: JsonObject | null): boolean {
 }
 
 function hasProteusInstructions(config: JsonObject | null): boolean {
-  return Boolean(config && Array.isArray(config.instructions) && config.instructions.includes(".opencode/instructions/proteus.md"));
+  if (!config || !Array.isArray(config.instructions)) return false;
+  return config.instructions.some(
+    (item) => typeof item === "string" && item.replace(/\\/g, "/").endsWith("instructions/proteus.md")
+  );
 }
 
 function listNames(dir: string, suffix?: string): string[] {
@@ -337,9 +327,4 @@ function proteusPluginRoot(): string {
 
 function isObject(value: unknown): value is JsonObject {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
-}
-
-function quoteShellCommand(command: string): string {
-  if (/^[A-Za-z0-9_.:/\\-]+$/.test(command)) return command;
-  return `"${command.replace(/"/g, '\\"')}"`;
 }

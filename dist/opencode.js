@@ -5,7 +5,6 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.installOpenCodeSupport = installOpenCodeSupport;
 exports.doctorOpenCodeSupport = doctorOpenCodeSupport;
-const node_child_process_1 = require("node:child_process");
 const node_fs_1 = __importDefault(require("node:fs"));
 const node_path_1 = __importDefault(require("node:path"));
 const paths_1 = require("./paths");
@@ -52,7 +51,8 @@ const SKILL_ALIASES = [
     }
 ];
 function installOpenCodeSupport(root, options = {}) {
-    const targetRoot = node_path_1.default.resolve(root);
+    const targetRoot = options.global ? (0, paths_1.openCodeGlobalConfigDir)() : node_path_1.default.resolve(root ?? process.cwd());
+    const assetsRoot = options.global ? targetRoot : node_path_1.default.join(targetRoot, ".opencode");
     const result = {
         root: targetRoot,
         configPath: node_path_1.default.join(targetRoot, "opencode.json"),
@@ -62,22 +62,21 @@ function installOpenCodeSupport(root, options = {}) {
         advisories: []
     };
     (0, paths_1.ensureDir)(targetRoot);
-    installOpenCodeConfig(targetRoot, result, options);
-    installOpenCodeInstructions(targetRoot, result, options);
-    installOpenCodeCommand(targetRoot, result, options);
-    installOpenCodeSkills(targetRoot, result, options);
-    installOpenCodeAgents(targetRoot, result, options);
-    installOpenCodeTemplates(targetRoot, result, options);
+    installOpenCodeConfig(targetRoot, assetsRoot, result, options);
+    installOpenCodeInstructions(assetsRoot, result, options);
+    installOpenCodeCommand(assetsRoot, result, options);
+    installOpenCodeSkills(assetsRoot, result, options);
+    installOpenCodeAgents(assetsRoot, result, options);
+    installOpenCodeTemplates(assetsRoot, result, options);
     return result;
 }
-function doctorOpenCodeSupport(root) {
-    const targetRoot = node_path_1.default.resolve(root);
+function doctorOpenCodeSupport(root, options = {}) {
+    const targetRoot = options.global ? (0, paths_1.openCodeGlobalConfigDir)() : node_path_1.default.resolve(root ?? process.cwd());
+    const assetsRoot = options.global ? targetRoot : node_path_1.default.join(targetRoot, ".opencode");
     const configPath = node_path_1.default.join(targetRoot, "opencode.json");
     const configRead = readJsonConfig(configPath);
-    const opencode = detectOpenCode();
     const result = {
         root: targetRoot,
-        opencode,
         config: {
             path: configPath,
             exists: node_fs_1.default.existsSync(configPath),
@@ -86,18 +85,17 @@ function doctorOpenCodeSupport(root) {
             hasProteusInstructions: hasProteusInstructions(configRead.value)
         },
         assets: {
-            commands: listNames(node_path_1.default.join(targetRoot, ".opencode", "commands"), ".md"),
-            agents: listNames(node_path_1.default.join(targetRoot, ".opencode", "agents"), ".md"),
-            skills: listSkillNames(node_path_1.default.join(targetRoot, ".opencode", "skills")),
-            templates: listNames(node_path_1.default.join(targetRoot, ".opencode", "templates"))
+            commands: listNames(node_path_1.default.join(assetsRoot, "commands"), ".md"),
+            agents: listNames(node_path_1.default.join(assetsRoot, "agents"), ".md"),
+            skills: listSkillNames(node_path_1.default.join(assetsRoot, "skills")),
+            templates: listNames(node_path_1.default.join(assetsRoot, "templates"))
         },
         ok: false,
         advisories: []
     };
-    if (!opencode.found)
-        result.advisories.push("OpenCode CLI was not found on PATH.");
+    const installHint = options.global ? "proteus opencode install --global" : "proteus opencode install --root <path>";
     if (!result.config.exists)
-        result.advisories.push("opencode.json is missing. Run `proteus opencode install --root <path>`.");
+        result.advisories.push(`opencode.json is missing. Run \`${installHint}\`.`);
     if (result.config.exists && !result.config.validJson)
         result.advisories.push("opencode.json is not valid JSON. Proteus will not modify JSONC/commented configs automatically.");
     if (!result.config.hasProteusMcp)
@@ -110,10 +108,10 @@ function doctorOpenCodeSupport(root) {
     }
     if (!result.assets.commands.includes("proteus"))
         result.advisories.push("Missing OpenCode command: /proteus");
-    result.ok = opencode.found && result.config.validJson && result.config.hasProteusMcp && result.config.hasProteusInstructions && result.advisories.length === 0;
+    result.ok = result.config.validJson && result.config.hasProteusMcp && result.config.hasProteusInstructions && result.advisories.length === 0;
     return result;
 }
-function installOpenCodeConfig(targetRoot, result, options) {
+function installOpenCodeConfig(targetRoot, assetsRoot, result, options) {
     const configPath = node_path_1.default.join(targetRoot, "opencode.json");
     const existing = readJsonConfig(configPath);
     if (node_fs_1.default.existsSync(configPath) && !existing.ok) {
@@ -130,16 +128,17 @@ function installOpenCodeConfig(targetRoot, result, options) {
         enabled: true,
         timeout: 15000
     };
+    const instructionsPath = (0, paths_1.toRelative)(targetRoot, node_path_1.default.join(assetsRoot, "instructions", "proteus.md"));
     const instructions = Array.isArray(config.instructions) ? config.instructions.filter((item) => typeof item === "string") : [];
-    if (!instructions.includes(".opencode/instructions/proteus.md"))
-        instructions.push(".opencode/instructions/proteus.md");
+    if (!instructions.includes(instructionsPath))
+        instructions.push(instructionsPath);
     config.instructions = instructions;
     config.permission = isObject(config.permission) ? config.permission : {};
     config.permission.skill = isObject(config.permission.skill) ? config.permission.skill : {};
     config.permission.skill["proteus*"] = "allow";
     writeManagedFile(configPath, `${JSON.stringify(config, null, 2)}\n`, result, options);
 }
-function installOpenCodeInstructions(targetRoot, result, options) {
+function installOpenCodeInstructions(assetsRoot, result, options) {
     const instructions = `# Proteus OpenCode Runtime
 
 Proteus is available in this OpenCode project through:
@@ -151,16 +150,16 @@ Proteus is available in this OpenCode project through:
 
 When the user asks for Proteus research, load the \`proteus\` skill first. Use the specialist skills only when the current branch needs that specific method. Prefer MCP tools when available, and fall back to the \`proteus\` CLI when a tool is unavailable.
 `;
-    writeManagedFile(node_path_1.default.join(targetRoot, ".opencode", "instructions", "proteus.md"), instructions, result, options);
+    writeManagedFile(node_path_1.default.join(assetsRoot, "instructions", "proteus.md"), instructions, result, options);
 }
-function installOpenCodeCommand(targetRoot, result, options) {
+function installOpenCodeCommand(assetsRoot, result, options) {
     const source = node_path_1.default.join(proteusPluginRoot(), "commands", "proteus.md");
     const command = node_fs_1.default.existsSync(source)
         ? node_fs_1.default.readFileSync(source, "utf8")
         : `---\ndescription: Run Proteus continuous vulnerability research for the current target.\n---\n\nLoad the proteus skill and run the coordinator workflow for: $ARGUMENTS\n`;
-    writeManagedFile(node_path_1.default.join(targetRoot, ".opencode", "commands", "proteus.md"), command, result, options);
+    writeManagedFile(node_path_1.default.join(assetsRoot, "commands", "proteus.md"), command, result, options);
 }
-function installOpenCodeSkills(targetRoot, result, options) {
+function installOpenCodeSkills(assetsRoot, result, options) {
     const skillsRoot = node_path_1.default.join(proteusPluginRoot(), "skills");
     for (const alias of SKILL_ALIASES) {
         const source = node_path_1.default.join(skillsRoot, alias.source, "SKILL.md");
@@ -169,10 +168,10 @@ function installOpenCodeSkills(targetRoot, result, options) {
             continue;
         }
         const content = rewriteSkillFrontmatter(node_fs_1.default.readFileSync(source, "utf8"), alias.target, alias.description);
-        writeManagedFile(node_path_1.default.join(targetRoot, ".opencode", "skills", alias.target, "SKILL.md"), content, result, options);
+        writeManagedFile(node_path_1.default.join(assetsRoot, "skills", alias.target, "SKILL.md"), content, result, options);
     }
 }
-function installOpenCodeAgents(targetRoot, result, options) {
+function installOpenCodeAgents(assetsRoot, result, options) {
     const agentsRoot = node_path_1.default.join(proteusPluginRoot(), "agents");
     if (!node_fs_1.default.existsSync(agentsRoot))
         return;
@@ -181,10 +180,10 @@ function installOpenCodeAgents(targetRoot, result, options) {
             continue;
         const source = node_path_1.default.join(agentsRoot, entry.name);
         const content = rewriteAgentFrontmatter(node_fs_1.default.readFileSync(source, "utf8"));
-        writeManagedFile(node_path_1.default.join(targetRoot, ".opencode", "agents", entry.name), content, result, options);
+        writeManagedFile(node_path_1.default.join(assetsRoot, "agents", entry.name), content, result, options);
     }
 }
-function installOpenCodeTemplates(targetRoot, result, options) {
+function installOpenCodeTemplates(assetsRoot, result, options) {
     const templatesRoot = node_path_1.default.join(proteusPluginRoot(), "templates");
     if (!node_fs_1.default.existsSync(templatesRoot))
         return;
@@ -192,7 +191,7 @@ function installOpenCodeTemplates(targetRoot, result, options) {
         if (!entry.isFile())
             continue;
         const source = node_path_1.default.join(templatesRoot, entry.name);
-        writeManagedFile(node_path_1.default.join(targetRoot, ".opencode", "templates", entry.name), node_fs_1.default.readFileSync(source, "utf8"), result, options);
+        writeManagedFile(node_path_1.default.join(assetsRoot, "templates", entry.name), node_fs_1.default.readFileSync(source, "utf8"), result, options);
     }
 }
 function rewriteSkillFrontmatter(content, name, description) {
@@ -252,22 +251,6 @@ function readJsonConfig(filePath) {
         return { ok: false, value: null };
     }
 }
-function detectOpenCode() {
-    const command = process.env.OPENCODE_COMMAND?.trim() || "opencode";
-    try {
-        const version = (0, node_child_process_1.execFileSync)(command, ["--version"], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
-        return { found: true, version };
-    }
-    catch (firstError) {
-        try {
-            const version = (0, node_child_process_1.execSync)(`${quoteShellCommand(command)} --version`, { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
-            return { found: true, version };
-        }
-        catch {
-            return { found: false, error: firstError instanceof Error ? firstError.message : String(firstError) };
-        }
-    }
-}
 function hasProteusMcp(config) {
     if (!config || !isObject(config.mcp))
         return false;
@@ -275,7 +258,9 @@ function hasProteusMcp(config) {
     return isObject(proteus) && proteus.type === "local" && Array.isArray(proteus.command) && proteus.command.includes("proteus-mcp") && proteus.enabled !== false;
 }
 function hasProteusInstructions(config) {
-    return Boolean(config && Array.isArray(config.instructions) && config.instructions.includes(".opencode/instructions/proteus.md"));
+    if (!config || !Array.isArray(config.instructions))
+        return false;
+    return config.instructions.some((item) => typeof item === "string" && item.replace(/\\/g, "/").endsWith("instructions/proteus.md"));
 }
 function listNames(dir, suffix) {
     if (!node_fs_1.default.existsSync(dir))
@@ -298,9 +283,4 @@ function proteusPluginRoot() {
 }
 function isObject(value) {
     return Boolean(value) && typeof value === "object" && !Array.isArray(value);
-}
-function quoteShellCommand(command) {
-    if (/^[A-Za-z0-9_.:/\\-]+$/.test(command))
-        return command;
-    return `"${command.replace(/"/g, '\\"')}"`;
 }

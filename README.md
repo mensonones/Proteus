@@ -129,21 +129,33 @@ The plugin starts its bundled Proteus MCP server automatically. See
 
 ### OpenCode
 
-OpenCode support is project-local. First install and configure OpenCode from
-the official project, then let Proteus write the project assets:
+First install and configure OpenCode from the official project, then let
+Proteus write the assets:
 
 - OpenCode repository: <https://github.com/anomalyco/opencode>
 - OpenCode docs: <https://opencode.ai/docs/>
+
+Per-project (default), nested under `<path>/.opencode/`:
 
 ```powershell
 proteus opencode install --root C:\path\to\target
 proteus opencode doctor --root C:\path\to\target
 ```
 
-This creates `opencode.json`, `.opencode/commands/proteus.md`,
-`.opencode/skills/proteus*/`, `.opencode/agents/proteus-*.md`, templates, and
-local MCP wiring through `proteus-mcp`. Use `/proteus` inside OpenCode to start
-the coordinator workflow.
+Global, available in every OpenCode workspace, written flat into OpenCode's
+user-level config directory (`~/.config/opencode` on Linux/macOS,
+`%APPDATA%\opencode` on Windows). This is the only supported way to install
+Proteus globally for OpenCode; `--root` is ignored when `--global` is set:
+
+```powershell
+proteus opencode install --global
+proteus opencode doctor --global
+```
+
+Either mode creates `opencode.json`, a `commands/proteus.md`,
+`skills/proteus*/`, `agents/proteus-*.md`, templates, and local MCP wiring
+through `proteus-mcp`. Use `/proteus` inside OpenCode to start the coordinator
+workflow.
 
 ## Quick Start
 
@@ -155,7 +167,8 @@ are better reserved for cases where you explicitly want one specific skill.
 In Claude Code, use `/proteus:proteus`. This path is experimental; for offsec-heavy
 research, model-side restrictions may affect some workflows.
 
-In OpenCode, install the project support above and use `/proteus`.
+In OpenCode, install the support above (project-local or `--global`) and use
+`/proteus`.
 
 Example prompts:
 
@@ -234,6 +247,17 @@ actions such as `doctor`, `start`, `run`, messages, sessions, and labs still
 use `--root`. Chimera has no default run timeout; use `--timeout N` only for
 short bounded probes or tests, and stop normal sessions with `chimera kill` or
 `chimera close`.
+
+`--opencode-command` must be the real `opencode` CLI (it needs `opencode
+serve`), never an OpenCode Desktop GUI launcher like `ai.opencode.desktop` —
+Desktop does not implement headless `serve` and Chimera will not get a working
+server from it. `chimera doctor`'s `opencode` check only confirms `<command>
+--version` exits with status 0, so a Desktop launcher can pass that check
+without ever running headless; if `chimera doctor` looks fine but sessions
+never connect, or `opencodeServerUrl`/`opencodeServerPid` are stale, run
+`proteus chimera stop-server` and reconfigure `--opencode-command` to the CLI
+path. Desktop and the CLI can be installed side by side: Desktop for the
+interactive `/proteus` chat, the CLI for Chimera's headless co-agents.
 
 Common operations:
 

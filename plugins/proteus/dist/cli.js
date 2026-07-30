@@ -190,16 +190,17 @@ function cmdMerge(db, parsed) {
     console.log(JSON.stringify(result, null, 2));
 }
 function cmdOpenCode(subcommand, parsed) {
-    const root = (0, paths_1.resolveTargetRoot)(getString(parsed, "root") ?? process.cwd());
+    const global = getBoolean(parsed, "global");
+    const root = global ? undefined : (0, paths_1.resolveTargetRoot)(getString(parsed, "root") ?? process.cwd());
     switch (subcommand) {
         case "install":
-            console.log(JSON.stringify({ ok: true, ...(0, opencode_1.installOpenCodeSupport)(root, { force: getBoolean(parsed, "force") }) }, null, 2));
+            console.log(JSON.stringify({ ok: true, ...(0, opencode_1.installOpenCodeSupport)(root, { force: getBoolean(parsed, "force"), global }) }, null, 2));
             return;
         case "doctor":
-            console.log(JSON.stringify((0, opencode_1.doctorOpenCodeSupport)(root), null, 2));
+            console.log(JSON.stringify((0, opencode_1.doctorOpenCodeSupport)(root, { global }), null, 2));
             return;
         default:
-            throw new Error("Usage: proteus opencode install|doctor [--root <path>] [--force]");
+            throw new Error("Usage: proteus opencode install|doctor [--root <path> | --global] [--force]");
     }
 }
 function cmdChimera(db, subcommand, parsed) {
@@ -1511,8 +1512,8 @@ Usage:
   proteus status [--root <path>]
   proteus migrate [--root <path>]
   proteus merge --root <dest-root> --source <source-root|.vros|memory.sqlite> [--sources a,b] [--dry-run]
-  proteus opencode install [--root <path>] [--force]
-  proteus opencode doctor [--root <path>]
+  proteus opencode install [--root <path> | --global] [--force]
+  proteus opencode doctor [--root <path> | --global]
   proteus chimera config init|show|disable [--opencode-command <cmd>] [--server-url <url>] [--model <provider/model>] [--variant <variant>] [--timeout <seconds|0>]
   proteus chimera doctor [--root <path>]
   proteus chimera stop-server [--root <path>]
@@ -1569,9 +1570,18 @@ Role codenames are canonical Proteus roles. Host subagent names or nicknames
 belong in --surface, --objective, or notes, not --role.
 
 OpenCode support:
-  proteus opencode install writes project-local OpenCode config, /proteus
-  command, Proteus skills, specialist agents, templates, and local MCP wiring.
-  proteus opencode doctor checks the generated files and OpenCode CLI.
+  proteus opencode install [--root <path>] writes project-local OpenCode
+  config, /proteus command, Proteus skills, specialist agents, templates, and
+  local MCP wiring, nested under <path>/.opencode/.
+  proteus opencode install --global writes the same assets, flat (no
+  .opencode/ nesting), into OpenCode's user-level config directory
+  (\${XDG_CONFIG_HOME:-~/.config}/opencode, or %APPDATA%\\opencode on
+  Windows), making /proteus available in every OpenCode workspace. This is
+  the only supported way to install Proteus globally for OpenCode; --root is
+  ignored when --global is set.
+  proteus opencode doctor [--root <path> | --global] checks the generated
+  opencode.json, MCP wiring, skills, agents, and command for the matching
+  scope. Proteus targets OpenCode Desktop; it does not check for a CLI.
 `);
 }
 try {

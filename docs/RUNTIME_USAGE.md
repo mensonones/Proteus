@@ -27,17 +27,25 @@ one specific skill.
 
 In Claude Code, use the plugin command `/proteus:proteus`.
 
-In OpenCode, install project support and use `/proteus`:
+In OpenCode, install support and use `/proteus`. Per-project:
 
 ```powershell
 proteus opencode install --root C:\path\to\target
 proteus opencode doctor --root C:\path\to\target
 ```
 
-This writes `opencode.json`, `.opencode/commands/proteus.md`,
-`.opencode/skills/proteus*/`, `.opencode/agents/proteus-*.md`, templates, and
-the local MCP server config for `proteus-mcp`. See [Installation](INSTALLATION.md)
-for details.
+Or once, globally, so `/proteus` is available in every OpenCode workspace:
+
+```powershell
+proteus opencode install --global
+proteus opencode doctor --global
+```
+
+This writes `opencode.json`, a `commands/proteus.md`, `skills/proteus*/`,
+`agents/proteus-*.md`, templates, and the local MCP server config for
+`proteus-mcp` — nested under `.opencode/` for `--root`, flat under OpenCode's
+user-level config directory for `--global`. See
+[Installation](INSTALLATION.md) for details.
 
 Proteus is designed to benefit from host-assistant orchestration features when
 they are available in the session:

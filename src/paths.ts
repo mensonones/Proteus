@@ -38,6 +38,18 @@ export function globalVrosDir(): string {
   return path.join(os.homedir(), ".vros");
 }
 
+export function openCodeGlobalConfigDir(): string {
+  if (process.env.PROTEUS_OPENCODE_GLOBAL_DIR) {
+    return path.resolve(process.env.PROTEUS_OPENCODE_GLOBAL_DIR);
+  }
+  if (process.platform === "win32") {
+    const appData = process.env.APPDATA ?? path.join(os.homedir(), "AppData", "Roaming");
+    return path.join(appData, "opencode");
+  }
+  const xdgConfigHome = process.env.XDG_CONFIG_HOME ?? path.join(os.homedir(), ".config");
+  return path.join(xdgConfigHome, "opencode");
+}
+
 export function globalMemoryPath(): string {
   if (process.env.PROTEUS_GLOBAL_MEMORY_PATH) {
     return path.resolve(process.env.PROTEUS_GLOBAL_MEMORY_PATH);

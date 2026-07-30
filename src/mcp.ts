@@ -104,22 +104,29 @@ const tools: ToolDefinition[] = [
   {
     name: "proteus_opencode_install",
     title: "Install OpenCode Support",
-    description: "Write project-local OpenCode config, command, skills, agents, templates, and Proteus MCP wiring.",
+    description: "Write OpenCode config, command, skills, agents, templates, and Proteus MCP wiring — project-local under <root>/.opencode/, or flat into OpenCode's user-level config directory when global is true (the only supported way to install Proteus globally for OpenCode; root is ignored when global is true).",
     inputSchema: schema(
       {
-        root: stringProp("Target root path where opencode.json and .opencode/ should be written."),
-        force: booleanProp("Overwrite existing generated OpenCode files.")
+        root: stringProp("Target root path where opencode.json and .opencode/ should be written. Ignored when global is true."),
+        force: booleanProp("Overwrite existing generated OpenCode files."),
+        global: booleanProp("Install into OpenCode's user-level config directory (flat layout) instead of a project root.")
       },
-      ["root"]
+      []
     ),
-    handler: ({ root, force }) => toolEnvelope(installOpenCodeSupport(str(root), { force: force === true }))
+    handler: ({ root, force, global }) => toolEnvelope(installOpenCodeSupport(maybeStr(root), { force: force === true, global: global === true }))
   },
   {
     name: "proteus_opencode_doctor",
     title: "Check OpenCode Support",
-    description: "Check OpenCode CLI availability and project-local Proteus OpenCode config/assets.",
-    inputSchema: schema({ root: stringProp("Target root path.") }, ["root"]),
-    handler: ({ root }) => toolEnvelope(doctorOpenCodeSupport(str(root)))
+    description: "Check Proteus OpenCode config/assets (opencode.json, MCP wiring, skills, agents, command), project-local or in the global user-level config directory.",
+    inputSchema: schema(
+      {
+        root: stringProp("Target root path. Ignored when global is true."),
+        global: booleanProp("Check OpenCode's user-level config directory (flat layout) instead of a project root.")
+      },
+      []
+    ),
+    handler: ({ root, global }) => toolEnvelope(doctorOpenCodeSupport(maybeStr(root), { global: global === true }))
   },
   {
     name: "proteus_migrate",

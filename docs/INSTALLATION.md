@@ -160,6 +160,37 @@ It does not initialize Proteus target memory or modify an existing
 coordinator workflow. Use `--force` only when you want to refresh existing
 generated OpenCode files.
 
+### OpenCode Global Support
+
+`--root` only ever writes into one workspace, so `/proteus` and its coordinator
+skill are not available when you open a different project. To make Proteus
+available in every OpenCode workspace, install into OpenCode's user-level
+config directory instead:
+
+```powershell
+proteus opencode install --global
+proteus opencode doctor --global
+```
+
+`--global` resolves that directory the same way OpenCode itself does:
+`$XDG_CONFIG_HOME/opencode` (or `~/.config/opencode` if unset) on Linux/macOS,
+`%APPDATA%\opencode` on Windows. Override it with
+`PROTEUS_OPENCODE_GLOBAL_DIR` if needed. Unlike `--root`, this writes the
+assets flat (`skills/`, `agents/`, `commands/`, `instructions/`,
+`opencode.json` directly under that directory, no `.opencode/` wrapper),
+because that is the layout OpenCode's global config actually uses.
+
+`--global` is the only supported way to install the full Proteus OpenCode
+package (coordinator skill, specialists, agents, `/proteus` command, MCP
+wiring) at user level. It is unrelated to the standalone `npm run
+install:<skill>` scripts (`install:defensive-security-review`,
+`install:full-review`, `install:logic-review`, `install:maintainability-review`,
+`install:performance-review`, `install:maverick`), which only symlink
+individual generic code-review skills into `~/.claude/skills`,
+`~/.codex/skills`, and `~/.config/opencode/skills` and do not touch the
+coordinator skill, agents, command, or MCP config. `--root` and `--global`
+are mutually exclusive; `--root` is ignored when `--global` is set.
+
 ## Verify Runtime
 
 ```powershell
@@ -205,6 +236,26 @@ proteus chimera doctor --root C:\path\to\target
 Chimera config is global for the current user. Workspace commands still use
 `--root`. Runs have no default timeout; pass `--timeout N` only for deliberate
 smoke tests or short probes.
+
+`--opencode-command` must point at the real `opencode` CLI binary (the one
+that supports `opencode serve`), not at an OpenCode Desktop launcher such as
+`ai.opencode.desktop`. Chimera spawns `<opencode-command> serve --hostname
+127.0.0.1 --port <port>` to get a headless server it talks to over HTTP; a
+Desktop GUI launcher does not implement that and will not serve anything.
+
+This is not caught automatically. `proteus chimera doctor`'s `opencode` check
+only verifies that `<opencode-command> --version` exits with status 0 — it
+does not check the output. A Desktop GUI launcher can exit 0 (for example
+because it detects a running instance and exits, or because it just started
+without crashing) without ever having run headless, so `chimera doctor` can
+report `ok: true` for a command that will still fail when Chimera actually
+tries to start a server. If `chimera start`/`chimera doctor` ever reports a
+stale or unresponsive `opencodeServerUrl`/`opencodeServerPid`, treat that as a
+sign the configured command is not the real CLI, run `proteus chimera
+stop-server` to clear the stale state, then re-run `chimera config init` with
+`--opencode-command` set to the actual `opencode` CLI path. Desktop and the CLI
+can coexist: use Desktop for the interactive `/proteus` chat experience and
+the CLI exclusively for Chimera's headless co-agents.
 
 ## Uninstall CLI
 

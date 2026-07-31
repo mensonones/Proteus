@@ -945,7 +945,7 @@ const tools: ToolDefinition[] = [
     inputSchema: schema(
       {
         root: stringProp("Target root path."),
-        role: stringProp("Role codename: generalist, argus, loom, chaos, libris, mimic, artificer, skeptic, or cicada. Case-insensitive display names are normalized."),
+        role: stringProp("Role codename: generalist, argus, loom, chaos, libris, mimic, artificer, skeptic, cicada, or maverick. Case-insensitive display names are normalized."),
         surface: stringProp("Bounded surface assigned by the coordinator."),
         objective: stringProp("Round or front objective."),
         avoid: arrayProp("Known paths, claims, or surfaces to avoid.")
@@ -1277,7 +1277,7 @@ const tools: ToolDefinition[] = [
       {
         root: stringProp(),
         roundId: numberProp(),
-        codename: stringProp("Canonical Proteus role codename: generalist, argus, loom, chaos, libris, mimic, artificer, skeptic, or cicada. Display-name casing is normalized; host subagent names are not roles."),
+        codename: stringProp("Canonical Proteus role codename: generalist, argus, loom, chaos, libris, mimic, artificer, skeptic, cicada, or maverick. Display-name casing is normalized; host subagent names are not roles."),
         roleFamily: stringProp(),
         assignedSurface: stringProp(),
         outputPath: stringProp(),

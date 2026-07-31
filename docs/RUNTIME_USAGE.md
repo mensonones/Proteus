@@ -56,7 +56,8 @@ they are available in the session:
 - Use subagents for independent, bounded Proteus fronts when delegation is
   available and allowed. Assign one canonical Proteus codename and one surface
   per subagent. Host subagent names are not Proteus roles. Valid codenames are
-  Generalist, Argus, Loom, Chaos, Libris, Mimic, Artificer, Skeptic, or Cicada.
+  Generalist, Argus, Loom, Chaos, Libris, Mimic, Artificer, Skeptic, Cicada, or
+  Maverick.
 - Keep the coordinator in charge of ROI selection, memory updates, validation
   gates, duplicate checks, kill/promote decisions, and replanning.
 - Fall back to serial local execution when goal mode, subagents, MCP tools, or
@@ -202,6 +203,7 @@ mimic
 artificer
 skeptic
 cicada
+maverick
 ```
 
 ## Record Research State
@@ -410,8 +412,8 @@ node dist/cli.js update surface --root C:\path\to\target --id 1 --status exhaust
 ```
 
 Use this after a round when Generalist, Argus, Loom, Chaos, Libris, Mimic,
-Artificer, Skeptic, or Cicada has exhausted or downgraded a surface. The planner
-uses these status fields to avoid repeated low-ROI work.
+Artificer, Skeptic, Cicada, or Maverick has exhausted or downgraded a surface.
+The planner uses these status fields to avoid repeated low-ROI work.
 
 ## Agent Output Records
 

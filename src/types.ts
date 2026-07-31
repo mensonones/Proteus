@@ -15,7 +15,8 @@ export type AgentCodename =
   | "mimic"
   | "artificer"
   | "skeptic"
-  | "cicada";
+  | "cicada"
+  | "maverick";
 
 export type SurfaceStatus =
   | "unmapped"

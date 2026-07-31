@@ -528,11 +528,16 @@ specialist, use `generalist`.
 - `skeptic`: adversarial refutation and downgrade pressure.
 - `cicada`: exploit-development, bypass, reliability, and chaining for branches
   that already have concrete signal and a known blocker.
+- `maverick`: 0-day hunting via First Principles, breaking business logic
+  through invariant violation, state machine drift, and feature weaponization
+  instead of classic bug classes. Triggered in Round 2, after Libris and Argus
+  have mapped invariants and architecture rules in Round 1.
 
 Artificer starts only after initial gates have enough evidence. Skeptic starts
 after technical evidence exists. Cicada starts only after a branch has concrete
-signal. A candidate cannot become report-grade until the intelligence/timeline
-review and Skeptic rebuttal are recorded.
+signal. Maverick starts in Round 2 once Libris and Argus have produced an
+invariant map. A candidate cannot become report-grade until the
+intelligence/timeline review and Skeptic rebuttal are recorded.
 
 ## Contract Resolution
 
@@ -550,6 +555,7 @@ proteus-mimic.md
 proteus-artificer.md
 proteus-skeptic.md
 proteus-cicada.md
+proteus-maverick.md
 ```
 
 `generalist` is a canonical Proteus codename for bounded generic triage. It

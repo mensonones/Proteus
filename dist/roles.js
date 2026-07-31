@@ -136,6 +136,21 @@ exports.ROLES = {
             "kill conditions",
             "contract signature"
         ]
+    },
+    maverick: {
+        codename: "maverick",
+        displayName: "Maverick",
+        family: "zero-day-first-principles",
+        purpose: "Hunt 0-days through First Principles by mapping system invariants and breaking business logic via absurd interactions, state machine drift, side-effect chaining, and feature weaponization, ignoring classic OWASP-style bug classes.",
+        startsWhen: "Triggered in Round 2, after Libris and Argus have mapped invariants and architecture rules for the coordinator to hand off.",
+        requiredOutput: [
+            "identified invariants",
+            "absurd interaction theories",
+            "feature-chain weaponization paths",
+            "mechanical failure descriptions without security jargon",
+            "kill conditions per theory",
+            "handoff target: skeptic, coordinator, or kill"
+        ]
     }
 };
 exports.ROLE_ORDER = [
@@ -147,7 +162,8 @@ exports.ROLE_ORDER = [
     "mimic",
     "artificer",
     "skeptic",
-    "cicada"
+    "cicada",
+    "maverick"
 ];
 function normalizeAgentCodename(value) {
     const normalized = String(value ?? "")

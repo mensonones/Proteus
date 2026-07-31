@@ -43,7 +43,7 @@ export interface OpenCodeDoctorResult {
   advisories: string[];
 }
 
-const SKILL_ALIASES = [
+export const SKILL_ALIASES = [
   {
     source: "continuous-vuln-research",
     target: "proteus",
@@ -91,6 +91,43 @@ const SKILL_ALIASES = [
     target: "proteus-web-research",
     description:
       "Conduct authorized Proteus web research with campaign memory, chaining, fuzzing, intel, and PoC heuristics."
+  },
+  {
+    source: "mobile-reversing",
+    target: "proteus-mobile-reversing",
+    description:
+      "Investigate Android/iOS mobile artifacts (APK/AAB/IPA, React Native/Hermes bundles, native libraries) for Proteus mobile-specific vulnerability research.",
+    copyResources: true
+  },
+  {
+    source: "maintainability-review",
+    target: "maintainability-review",
+    description:
+      "Run a strict Proteus structural code quality review focused on maintainability, abstraction quality, and architecture drift."
+  },
+  {
+    source: "logic-and-edge-case-review",
+    target: "logic-and-edge-case-review",
+    description:
+      "Run a strict Proteus review focused on correctness, edge cases, race conditions, and logic bugs."
+  },
+  {
+    source: "defensive-security-review",
+    target: "defensive-security-review",
+    description:
+      "Run a strict Proteus application security review (AppSec) focused on Git diffs."
+  },
+  {
+    source: "performance-scale-review",
+    target: "performance-scale-review",
+    description:
+      "Run a strict Proteus review focused on performance bottlenecks, scalability, and algorithmic efficiency."
+  },
+  {
+    source: "meta/full-review",
+    target: "full-review",
+    description:
+      "Orchestrate a complete 360-degree Proteus review: logic-and-edge-case-review, defensive-security-review, and performance-scale-review sequentially."
   }
 ];
 
@@ -179,12 +216,14 @@ function installOpenCodeConfig(targetRoot: string, assetsRoot: string, result: O
 }
 
 function installOpenCodeInstructions(assetsRoot: string, result: OpenCodeInstallResult, options: OpenCodeInstallOptions): void {
+  const specialistNames = SKILL_ALIASES.map((alias) => alias.target).filter((target) => target !== "proteus");
+  const specialistList = specialistNames.map((name) => `\`${name}\``).join(", ").replace(/, ([^,]*)$/, ", and $1");
   const instructions = `# Proteus OpenCode Runtime
 
 Proteus is available in this OpenCode project through:
 
 - the \`proteus\` skill for coordinator-led continuous vulnerability research;
-- specialist skills named \`proteus-chaining\`, \`proteus-codebase-research\`, \`proteus-fuzzing\`, \`proteus-web-intel\`, \`proteus-web-research\`, \`proteus-poc-exploit\`, and \`proteus-checkpoint\`;
+- specialist skills named ${specialistList};
 - the local \`proteus\` MCP server, started through \`proteus-mcp\`;
 - the \`/proteus\` command for starting the coordinator workflow.
 
@@ -209,9 +248,56 @@ function installOpenCodeSkills(assetsRoot: string, result: OpenCodeInstallResult
       result.advisories.push(`Packaged Proteus skill missing: ${alias.source}`);
       continue;
     }
+    const destinationDir = path.join(assetsRoot, "skills", alias.target);
+    if (isSymlink(destinationDir)) {
+      result.skipped.push(destinationDir);
+      result.advisories.push(
+        `Skipped symlinked skill directory: ${destinationDir}. It is externally managed (for example by a separate ` +
+          "install:*-skill script) and writing through it would overwrite the symlink target instead of this directory. " +
+          "Remove the symlink first if you want Proteus to manage this skill directly."
+      );
+      continue;
+    }
     const content = rewriteSkillFrontmatter(fs.readFileSync(source, "utf8"), alias.target, alias.description);
-    writeManagedFile(path.join(assetsRoot, "skills", alias.target, "SKILL.md"), content, result, options);
+    writeManagedFile(path.join(destinationDir, "SKILL.md"), content, result, options);
+    if (alias.copyResources) {
+      installSkillResources(path.join(skillsRoot, alias.source), destinationDir, result, options);
+    }
   }
+}
+
+function isSymlink(targetPath: string): boolean {
+  try {
+    return fs.lstatSync(targetPath).isSymbolicLink();
+  } catch {
+    return false;
+  }
+}
+
+function installSkillResources(sourceDir: string, destinationDir: string, result: OpenCodeInstallResult, options: OpenCodeInstallOptions): void {
+  for (const child of ["scripts", "references"]) {
+    const sourceChild = path.join(sourceDir, child);
+    if (!fs.existsSync(sourceChild)) continue;
+    for (const filePath of listFilesRecursive(sourceChild)) {
+      const basename = path.basename(filePath);
+      if (basename === "__pycache__" || filePath.includes(`${path.sep}__pycache__${path.sep}`) || basename.endsWith(".pyc") || basename.endsWith(".pyo")) continue;
+      const relative = path.relative(sourceDir, filePath);
+      writeManagedFile(path.join(destinationDir, relative), fs.readFileSync(filePath, "utf8"), result, options);
+    }
+  }
+}
+
+function listFilesRecursive(dir: string): string[] {
+  const files: string[] = [];
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const entryPath = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      files.push(...listFilesRecursive(entryPath));
+    } else if (entry.isFile()) {
+      files.push(entryPath);
+    }
+  }
+  return files;
 }
 
 function installOpenCodeAgents(assetsRoot: string, result: OpenCodeInstallResult, options: OpenCodeInstallOptions): void {
@@ -316,9 +402,19 @@ function listNames(dir: string, suffix?: string): string[] {
 function listSkillNames(dir: string): string[] {
   if (!fs.existsSync(dir)) return [];
   return fs.readdirSync(dir, { withFileTypes: true })
-    .filter((entry) => entry.isDirectory() && fs.existsSync(path.join(dir, entry.name, "SKILL.md")))
+    .filter((entry) => isDirectoryEntry(dir, entry) && fs.existsSync(path.join(dir, entry.name, "SKILL.md")))
     .map((entry) => entry.name)
     .sort();
+}
+
+function isDirectoryEntry(dir: string, entry: fs.Dirent): boolean {
+  if (entry.isDirectory()) return true;
+  if (!entry.isSymbolicLink()) return false;
+  try {
+    return fs.statSync(path.join(dir, entry.name)).isDirectory();
+  } catch {
+    return false;
+  }
 }
 
 function proteusPluginRoot(): string {

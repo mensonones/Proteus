@@ -3,12 +3,13 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.SKILL_ALIASES = void 0;
 exports.installOpenCodeSupport = installOpenCodeSupport;
 exports.doctorOpenCodeSupport = doctorOpenCodeSupport;
 const node_fs_1 = __importDefault(require("node:fs"));
 const node_path_1 = __importDefault(require("node:path"));
 const paths_1 = require("./paths");
-const SKILL_ALIASES = [
+exports.SKILL_ALIASES = [
     {
         source: "continuous-vuln-research",
         target: "proteus",
@@ -48,6 +49,37 @@ const SKILL_ALIASES = [
         source: "web-research",
         target: "proteus-web-research",
         description: "Conduct authorized Proteus web research with campaign memory, chaining, fuzzing, intel, and PoC heuristics."
+    },
+    {
+        source: "mobile-reversing",
+        target: "proteus-mobile-reversing",
+        description: "Investigate Android/iOS mobile artifacts (APK/AAB/IPA, React Native/Hermes bundles, native libraries) for Proteus mobile-specific vulnerability research.",
+        copyResources: true
+    },
+    {
+        source: "maintainability-review",
+        target: "maintainability-review",
+        description: "Run a strict Proteus structural code quality review focused on maintainability, abstraction quality, and architecture drift."
+    },
+    {
+        source: "logic-and-edge-case-review",
+        target: "logic-and-edge-case-review",
+        description: "Run a strict Proteus review focused on correctness, edge cases, race conditions, and logic bugs."
+    },
+    {
+        source: "defensive-security-review",
+        target: "defensive-security-review",
+        description: "Run a strict Proteus application security review (AppSec) focused on Git diffs."
+    },
+    {
+        source: "performance-scale-review",
+        target: "performance-scale-review",
+        description: "Run a strict Proteus review focused on performance bottlenecks, scalability, and algorithmic efficiency."
+    },
+    {
+        source: "meta/full-review",
+        target: "full-review",
+        description: "Orchestrate a complete 360-degree Proteus review: logic-and-edge-case-review, defensive-security-review, and performance-scale-review sequentially."
     }
 ];
 function installOpenCodeSupport(root, options = {}) {
@@ -102,7 +134,7 @@ function doctorOpenCodeSupport(root, options = {}) {
         result.advisories.push("opencode.json does not enable the Proteus MCP server.");
     if (!result.config.hasProteusInstructions)
         result.advisories.push("opencode.json does not reference the Proteus OpenCode instructions.");
-    for (const required of SKILL_ALIASES.map((item) => item.target)) {
+    for (const required of exports.SKILL_ALIASES.map((item) => item.target)) {
         if (!result.assets.skills.includes(required))
             result.advisories.push(`Missing OpenCode skill: ${required}`);
     }
@@ -139,12 +171,14 @@ function installOpenCodeConfig(targetRoot, assetsRoot, result, options) {
     writeManagedFile(configPath, `${JSON.stringify(config, null, 2)}\n`, result, options);
 }
 function installOpenCodeInstructions(assetsRoot, result, options) {
+    const specialistNames = exports.SKILL_ALIASES.map((alias) => alias.target).filter((target) => target !== "proteus");
+    const specialistList = specialistNames.map((name) => `\`${name}\``).join(", ").replace(/, ([^,]*)$/, ", and $1");
     const instructions = `# Proteus OpenCode Runtime
 
 Proteus is available in this OpenCode project through:
 
 - the \`proteus\` skill for coordinator-led continuous vulnerability research;
-- specialist skills named \`proteus-chaining\`, \`proteus-codebase-research\`, \`proteus-fuzzing\`, \`proteus-web-intel\`, \`proteus-web-research\`, \`proteus-poc-exploit\`, and \`proteus-checkpoint\`;
+- specialist skills named ${specialistList};
 - the local \`proteus\` MCP server, started through \`proteus-mcp\`;
 - the \`/proteus\` command for starting the coordinator workflow.
 
@@ -161,15 +195,61 @@ function installOpenCodeCommand(assetsRoot, result, options) {
 }
 function installOpenCodeSkills(assetsRoot, result, options) {
     const skillsRoot = node_path_1.default.join(proteusPluginRoot(), "skills");
-    for (const alias of SKILL_ALIASES) {
+    for (const alias of exports.SKILL_ALIASES) {
         const source = node_path_1.default.join(skillsRoot, alias.source, "SKILL.md");
         if (!node_fs_1.default.existsSync(source)) {
             result.advisories.push(`Packaged Proteus skill missing: ${alias.source}`);
             continue;
         }
+        const destinationDir = node_path_1.default.join(assetsRoot, "skills", alias.target);
+        if (isSymlink(destinationDir)) {
+            result.skipped.push(destinationDir);
+            result.advisories.push(`Skipped symlinked skill directory: ${destinationDir}. It is externally managed (for example by a separate ` +
+                "install:*-skill script) and writing through it would overwrite the symlink target instead of this directory. " +
+                "Remove the symlink first if you want Proteus to manage this skill directly.");
+            continue;
+        }
         const content = rewriteSkillFrontmatter(node_fs_1.default.readFileSync(source, "utf8"), alias.target, alias.description);
-        writeManagedFile(node_path_1.default.join(assetsRoot, "skills", alias.target, "SKILL.md"), content, result, options);
+        writeManagedFile(node_path_1.default.join(destinationDir, "SKILL.md"), content, result, options);
+        if (alias.copyResources) {
+            installSkillResources(node_path_1.default.join(skillsRoot, alias.source), destinationDir, result, options);
+        }
     }
+}
+function isSymlink(targetPath) {
+    try {
+        return node_fs_1.default.lstatSync(targetPath).isSymbolicLink();
+    }
+    catch {
+        return false;
+    }
+}
+function installSkillResources(sourceDir, destinationDir, result, options) {
+    for (const child of ["scripts", "references"]) {
+        const sourceChild = node_path_1.default.join(sourceDir, child);
+        if (!node_fs_1.default.existsSync(sourceChild))
+            continue;
+        for (const filePath of listFilesRecursive(sourceChild)) {
+            const basename = node_path_1.default.basename(filePath);
+            if (basename === "__pycache__" || filePath.includes(`${node_path_1.default.sep}__pycache__${node_path_1.default.sep}`) || basename.endsWith(".pyc") || basename.endsWith(".pyo"))
+                continue;
+            const relative = node_path_1.default.relative(sourceDir, filePath);
+            writeManagedFile(node_path_1.default.join(destinationDir, relative), node_fs_1.default.readFileSync(filePath, "utf8"), result, options);
+        }
+    }
+}
+function listFilesRecursive(dir) {
+    const files = [];
+    for (const entry of node_fs_1.default.readdirSync(dir, { withFileTypes: true })) {
+        const entryPath = node_path_1.default.join(dir, entry.name);
+        if (entry.isDirectory()) {
+            files.push(...listFilesRecursive(entryPath));
+        }
+        else if (entry.isFile()) {
+            files.push(entryPath);
+        }
+    }
+    return files;
 }
 function installOpenCodeAgents(assetsRoot, result, options) {
     const agentsRoot = node_path_1.default.join(proteusPluginRoot(), "agents");
@@ -274,9 +354,21 @@ function listSkillNames(dir) {
     if (!node_fs_1.default.existsSync(dir))
         return [];
     return node_fs_1.default.readdirSync(dir, { withFileTypes: true })
-        .filter((entry) => entry.isDirectory() && node_fs_1.default.existsSync(node_path_1.default.join(dir, entry.name, "SKILL.md")))
+        .filter((entry) => isDirectoryEntry(dir, entry) && node_fs_1.default.existsSync(node_path_1.default.join(dir, entry.name, "SKILL.md")))
         .map((entry) => entry.name)
         .sort();
+}
+function isDirectoryEntry(dir, entry) {
+    if (entry.isDirectory())
+        return true;
+    if (!entry.isSymbolicLink())
+        return false;
+    try {
+        return node_fs_1.default.statSync(node_path_1.default.join(dir, entry.name)).isDirectory();
+    }
+    catch {
+        return false;
+    }
 }
 function proteusPluginRoot() {
     return node_path_1.default.resolve(__dirname, "..", "plugins", "proteus");

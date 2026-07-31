@@ -1,8 +1,10 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { createRequire } from "node:module";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const require = createRequire(import.meta.url);
 
 const codexMarketplacePath = path.join(repoRoot, ".agents", "plugins", "marketplace.json");
 const codexMarketplace = readJson(codexMarketplacePath);
@@ -87,6 +89,26 @@ assert(openCodeSkill.includes(torPreflightMarker), "Generated OpenCode Proteus s
 const openCodeAgents = fs.readdirSync(path.join(repoRoot, ".opencode", "agents")).filter((name) => name.startsWith("proteus-") && name.endsWith(".md"));
 assert(openCodeAgents.length === roleFiles.length, "OpenCode agent count does not match canonical role contracts");
 
+// Guards against skills silently disappearing from `proteus opencode install`/`doctor`.
+// Every skill folder under plugins/proteus/skills/ must either be registered in
+// SKILL_ALIASES (src/opencode.ts, requires `npm run build` to be current in dist/opencode.js)
+// or listed below with a reason it is intentionally not directly installable.
+const { SKILL_ALIASES: openCodeSkillAliases } = require(path.join(repoRoot, "dist", "opencode.js"));
+const openCodeSkillSources = new Set(openCodeSkillAliases.map((alias) => alias.source));
+const knownOpenCodeSkillExclusions = new Map([
+  ["proteus", "Codex/Claude Code entrypoint skill; OpenCode's `proteus` skill is generated from the continuous-vuln-research source instead (see SKILL_ALIASES)"],
+  ["chimera-agent", "injected into secondary Chimera OpenCode agents at runtime, not directly installed"],
+  ["zero-day-maverick", "has its own dedicated installer (npm run install:maverick) across Codex, Claude Code, and OpenCode"],
+  ["meta/context-hygiene", "not currently wired into any installer surface (Codex, Claude Code, or OpenCode)"]
+]);
+for (const skillDir of findSkillDirs(path.join(pluginRoot, "skills"))) {
+  assert(
+    openCodeSkillSources.has(skillDir) || knownOpenCodeSkillExclusions.has(skillDir),
+    `Proteus skill "${skillDir}" is registered in neither SKILL_ALIASES (src/opencode.ts) nor knownOpenCodeSkillExclusions ` +
+      `(scripts/integration-surface-test.mjs). Wire it into the OpenCode installer or add it to the exclusion list with a reason.`
+  );
+}
+
 const packageJson = readJson(path.join(repoRoot, "package.json"));
 assert(packageJson.files?.includes(".codex/"), "npm package does not include native Codex agents");
 assert(packageJson.bin?.["proteus-install-codex-agents"], "npm package does not expose the Codex agent installer");
@@ -100,6 +122,21 @@ function readJson(filePath) {
 
 function assertFile(filePath) {
   assert(fs.existsSync(filePath), `Missing integration file: ${filePath}`);
+}
+
+function findSkillDirs(root, prefix = "") {
+  const found = [];
+  for (const entry of fs.readdirSync(root, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue;
+    const relative = prefix ? `${prefix}/${entry.name}` : entry.name;
+    const entryPath = path.join(root, entry.name);
+    if (fs.existsSync(path.join(entryPath, "SKILL.md"))) {
+      found.push(relative);
+    } else {
+      found.push(...findSkillDirs(entryPath, relative));
+    }
+  }
+  return found;
 }
 
 function assertSkill(filePath, expectedName) {

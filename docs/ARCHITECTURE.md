@@ -128,6 +128,7 @@ as prompt generation plus output validation.
 Canonical role names:
 
 ```text
+Generalist: bounded generic triage and routing.
 Argus: component-level review.
 Loom: macro/chaining analysis.
 Chaos: fuzzing and edge-case generation.
@@ -135,6 +136,9 @@ Libris: docs/contract verification.
 Mimic: runtime/adapter/environment divergence.
 Artificer: PoC/lab construction.
 Skeptic: adversarial review and refutation.
+Cicada: exploit-development, bypass, and chaining.
+Maverick: 0-day hunting via First Principles.
+Janus: access-control and authorization review.
 ```
 
 Memory records should store both the codename and the role family so exports are

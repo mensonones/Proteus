@@ -353,6 +353,7 @@ artificer
 skeptic
 cicada
 maverick
+janus
 ```
 
 ### global_learnings

@@ -168,6 +168,23 @@ export const ROLES: Record<AgentCodename, RoleDefinition> = {
       "kill conditions per theory",
       "handoff target: skeptic, coordinator, or kill"
     ]
+  },
+  janus: {
+    codename: "janus",
+    displayName: "Janus",
+    family: "access-control-authorization",
+    purpose:
+      "Systematically map the authorization matrix (actors, operations, objects) and hunt Broken Access Control: IDOR/BOLA, vertical and horizontal privilege escalation, tenant isolation gaps, and missing or inconsistent enforcement checks.",
+    startsWhen: "The target exposes authenticated multi-actor or multi-tenant surfaces, attacker-supplied object references, or role-gated operations that need systematic access-control coverage.",
+    requiredOutput: [
+      "authorization matrix of actors, operations, and objects",
+      "enforcement points mapped to operations",
+      "candidate boundary crossings",
+      "missing or inconsistent checks with exact locations",
+      "access-control probes per candidate",
+      "kill criteria per candidate",
+      "handoff target: skeptic, artificer, coordinator, or kill"
+    ]
   }
 };
 
@@ -181,7 +198,8 @@ export const ROLE_ORDER: AgentCodename[] = [
   "artificer",
   "skeptic",
   "cicada",
-  "maverick"
+  "maverick",
+  "janus"
 ];
 
 export function normalizeAgentCodename(value: string | undefined | null): AgentCodename | null {

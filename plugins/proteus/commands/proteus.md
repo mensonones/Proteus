@@ -152,6 +152,7 @@ for bounded triage that does not fit a specialist.
 - `skeptic`: devil's advocate and pre-claim refutation;
 - `cicada`: exploit-development, bypass, and chaining for branches with concrete signal;
 - `maverick`: 0-day hunting via First Principles, ignoring OWASP to focus purely on logic and invariants. Triggered in Round 2 after `libris` and `argus` mapping.
+- `janus`: systematic access-control and authorization review — maps the actor/operation/object matrix and hunts IDOR/BOLA, privilege escalation, tenant isolation gaps, and missing or inconsistent enforcement.
 
 Never delegate "review the repo". Assign one surface, one heuristic family,
 expected evidence, and kill criteria.
@@ -270,4 +271,4 @@ must write the JSON first. The packaged template is
 ```
 
 Valid `codename` values are `generalist`, `argus`, `loom`, `chaos`, `libris`,
-`mimic`, `artificer`, `skeptic`, `cicada`, and `maverick`.
+`mimic`, `artificer`, `skeptic`, `cicada`, `maverick`, and `janus`.

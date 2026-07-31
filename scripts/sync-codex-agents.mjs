@@ -16,7 +16,8 @@ const roleSettings = {
   "proteus-mimic": { sandbox: "workspace-write", reasoning: "high", nicknames: ["Mimic"] },
   "proteus-artificer": { sandbox: "workspace-write", reasoning: "high", nicknames: ["Artificer"] },
   "proteus-skeptic": { sandbox: "read-only", reasoning: "high", nicknames: ["Skeptic"] },
-  "proteus-cicada": { sandbox: "workspace-write", reasoning: "high", nicknames: ["Cicada"] }
+  "proteus-cicada": { sandbox: "workspace-write", reasoning: "high", nicknames: ["Cicada"] },
+  "proteus-janus": { sandbox: "read-only", reasoning: "high", nicknames: ["Janus"] }
 };
 
 fs.rmSync(destinationRoot, { recursive: true, force: true });

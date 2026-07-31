@@ -41,6 +41,7 @@ const expectedRoleFiles = [
   "proteus-chaos.md",
   "proteus-cicada.md",
   "proteus-generalist.md",
+  "proteus-janus.md",
   "proteus-libris.md",
   "proteus-loom.md",
   "proteus-maverick.md",

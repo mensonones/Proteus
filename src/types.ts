@@ -16,7 +16,8 @@ export type AgentCodename =
   | "artificer"
   | "skeptic"
   | "cicada"
-  | "maverick";
+  | "maverick"
+  | "janus";
 
 export type SurfaceStatus =
   | "unmapped"

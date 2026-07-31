@@ -532,12 +532,17 @@ specialist, use `generalist`.
   through invariant violation, state machine drift, and feature weaponization
   instead of classic bug classes. Triggered in Round 2, after Libris and Argus
   have mapped invariants and architecture rules in Round 1.
+- `janus`: systematic access-control and authorization review — maps the
+  actor/operation/object authorization matrix and hunts IDOR/BOLA, vertical and
+  horizontal privilege escalation, tenant isolation gaps, and missing or
+  inconsistent enforcement checks.
 
 Artificer starts only after initial gates have enough evidence. Skeptic starts
 after technical evidence exists. Cicada starts only after a branch has concrete
 signal. Maverick starts in Round 2 once Libris and Argus have produced an
-invariant map. A candidate cannot become report-grade until the
-intelligence/timeline review and Skeptic rebuttal are recorded.
+invariant map. Janus starts once authenticated multi-actor, multi-tenant, or
+object-reference surfaces are mapped. A candidate cannot become report-grade
+until the intelligence/timeline review and Skeptic rebuttal are recorded.
 
 ## Contract Resolution
 
@@ -556,6 +561,7 @@ proteus-artificer.md
 proteus-skeptic.md
 proteus-cicada.md
 proteus-maverick.md
+proteus-janus.md
 ```
 
 `generalist` is a canonical Proteus codename for bounded generic triage. It

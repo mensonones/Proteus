@@ -343,7 +343,7 @@ created_at
 Canonical codenames:
 
 ```text
-atlas
+generalist
 argus
 loom
 chaos
@@ -352,6 +352,7 @@ mimic
 artificer
 skeptic
 cicada
+maverick
 ```
 
 ### global_learnings

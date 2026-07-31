@@ -100,6 +100,7 @@ const knownOpenCodeSkillExclusions = new Map([
   ["proteus", "Codex/Claude Code entrypoint skill; OpenCode's `proteus` skill is generated from the continuous-vuln-research source instead (see SKILL_ALIASES)"],
   ["chimera-agent", "injected into secondary Chimera OpenCode agents at runtime, not directly installed"],
   ["zero-day-maverick", "has its own dedicated installer (npm run install:maverick) across Codex, Claude Code, and OpenCode"],
+  ["access-control-janus", "has its own dedicated installer (npm run install:janus) across Codex, Claude Code, and OpenCode"],
   ["meta/context-hygiene", "not currently wired into any installer surface (Codex, Claude Code, or OpenCode)"]
 ]);
 for (const skillDir of findSkillDirs(path.join(pluginRoot, "skills"))) {

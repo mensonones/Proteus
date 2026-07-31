@@ -13,7 +13,7 @@ The upstream repository removed the temporal tracking of bugs across multiple ro
 ## 2. Ephemeral Tor & Operational Hygiene (Stealth)
 Upstream Proteus agents make direct network calls, exposing the researcher's IP address. This fork enforces strict **Operational Security (OpSec)**:
 - **Mandatory Proxychains:** The Coordinator and all subagents are instructed to route all HTTP/HTTPS traffic through `proxychains4` pointing to a local Tor SOCKS5 proxy.
-- **`tor-ephemeral.sh` Script:** A custom lifecycle script that bootstraps, enforces (via kernel iptables to block non-Tor traffic like `webfetch`), and purges the Tor process.
+- **`tor-ephemeral.sh` Script:** A custom lifecycle script that bootstraps, enforces (via kernel `iptables` **and** `ip6tables`, dropping all non-Tor outbound TCP **and** UDP over both IPv4 and IPv6 — so direct `webfetch`, `curl`, and plaintext DNS all fail closed instead of leaking), and purges the Tor process. Tor's own traffic is allowed by process owner (`--uid-owner`, auto-detected or via `TOR_UID`) so new circuits keep building under lockdown.
 - **8-Step Trace Cleanup:** Every agent contract includes a rigorous hygiene checklist (deleting proxy captures, unsetting credentials, spacing shell commands) executed before every handoff.
 
 ## 3. Anti-Slop & Adversarial Refutation

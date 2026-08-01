@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.1.6 - 2026-08-01
+
+### Fixed
+
+- `tor-ephemeral.sh` now routes requests through the configured `TOR_SOCKS_PORT`. Previously `proxychains4` was invoked without a config, so it fell back to the system `/etc/proxychains4.conf` (hardcoded to 9050) and ignored `TOR_SOCKS_PORT` — Tor would listen on the configured port while traffic still went to 9050. A runtime proxychains config pinned to `$TOR_SOCKS_PORT` (or an explicit `PROXYCHAINS_CONF`) is now forced via `-f` on every request.
+- The base research contract's inline Tor fallback had the same defect (hardcoded `--SocksPort 9050` plus bare `proxychains4`); it now pins a generated proxychains config to `$TOR_SOCKS_PORT` and forces it with `-f`.
+
+### Changed
+
+- OpenCode is now self-contained for the Tor lifecycle: `sync-opencode` mirrors `plugins/proteus/scripts/` into `.opencode/scripts/` and rewrites script-path references (templates, command, skills) from `plugins/proteus/scripts/` to `.opencode/scripts/`, which never resolved in an OpenCode install.
+
 ## 2.1.5 - 2026-08-01
 
 ### Added

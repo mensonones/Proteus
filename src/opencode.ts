@@ -93,6 +93,13 @@ export const SKILL_ALIASES = [
       "Conduct authorized Proteus web research with campaign memory, chaining, fuzzing, intel, and PoC heuristics."
   },
   {
+    source: "waf-bypass",
+    target: "proteus-waf-bypass",
+    description:
+      "Design calibrated Proteus WAF evasion and filter bypass probes that learn how an edge filter discriminates benign from suspect input, one dimension at a time.",
+    copyResources: true
+  },
+  {
     source: "mobile-reversing",
     target: "proteus-mobile-reversing",
     description:

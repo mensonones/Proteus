@@ -11,6 +11,13 @@ proteus.sh
 proteus-mcp.cjs
 ```
 
+Runtime helpers:
+
+```text
+tor-ephemeral.sh          bootstrap/teardown ephemeral Tor with proxychains
+verify-tor-enforce.sh     assert outbound probes stay on Tor
+```
+
 Helper groups:
 
 ```text

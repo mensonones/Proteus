@@ -24,6 +24,7 @@ const skillMap = [
   ["poc-exploit", "proteus-poc-exploit"],
   ["web-intel", "proteus-web-intel"],
   ["web-research", "proteus-web-research"],
+  ["waf-bypass", "proteus-waf-bypass"],
   ["logic-and-edge-case-review", "logic-and-edge-case-review"],
   ["defensive-security-review", "defensive-security-review"],
   ["performance-scale-review", "performance-scale-review"],
@@ -99,10 +100,6 @@ function syncSkills() {
 }
 
 function syncSkillResources(sourceName, sourceDir, destinationDir) {
-  if (sourceName !== "mobile-reversing") {
-    return;
-  }
-
   for (const child of ["scripts", "references"]) {
     const sourceChild = path.join(sourceDir, child);
     if (fs.existsSync(sourceChild)) {

@@ -1,5 +1,17 @@
 # Changelog
 
+## 2.1.5 - 2026-08-01
+
+### Added
+
+- Stealth and rate discipline for live-target probing in the base research contract, so agents stop burning endpoints with scanner-signature bursts (one probe then read, cleanest value first, throttle with jitter, stop on first signal).
+- Authorized Direct Egress flow for WAF-blocked Tor: opt-in, per-campaign fallback with explicit user authorization under safe harbor, plus a program identifier header attached to every request.
+- Defensive-reaction-as-corroboration heuristic (edge block or CORS tightening after a probe is one-shot signal, not something to chase).
+
+### Fixed
+
+- Corrected `web-research` network routing that told agents to export `ALL_PROXY`, which conflicts with proxychains and breaks connections; it now uses `proxychains4` per the base contract.
+
 ## 2.1.4 - 2026-07-14
 
 ### Fixed

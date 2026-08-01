@@ -113,6 +113,44 @@ bash plugins/proteus/scripts/tor-ephemeral.sh purge   # stop + apt-get purge
   prompt-level suggestion; it is a netfilter rule that cannot be bypassed
   by ignoring instructions.
 
+## Stealth and Rate Discipline (live targets)
+
+On any live, third-party, or production-adjacent target, the request *pattern* is
+the tell, not the payload content. Modern edges (Akamai, Cloudflare, bot
+managers) score the shape and cadence of requests and block at the edge before
+the backend is ever reached, so a noisy sequence burns the endpoint — a hard 403
+or IP/identity ban — before the vulnerability can be proven or a PoC built. A
+confirmed bug on a permanently blocked endpoint is a self-inflicted dead end.
+
+These rules apply to live authorized remote targets. They do **not** apply to
+local, OSS, or private-lab surfaces you fully control, where broad and fast
+probing is fine.
+
+- **One probe, then read.** Send a single request, wait, and read the full
+  response before deciding the next one. Never fire a batch of payload variations
+  (for example `{}`, `0`, `null`, `"1234567890"`) at the same live endpoint in
+  quick succession. A burst of variations is the canonical signature of an
+  automated scanner and trips signed WAF/bot rules on request pattern alone.
+- **Cleanest value first.** Start with the most realistic, well-formed value the
+  workflow expects. Do not lead with payload folklore (SQLi markers, format
+  strings, repeated numeric probes, `../`, template/`${}` sequences) on a live
+  WAF-protected endpoint; those match signed rules regardless of what the backend
+  does.
+- **Throttle with jitter.** Space live requests with human-plausible, irregular
+  delays. Avoid fixed high-frequency sequences.
+- **Stop on first signal.** The moment a probe confirms the flaw, stop probing
+  that endpoint. Do not re-prove it several more times. Preserve access to build
+  the PoC; over-confirmation is what burns the source.
+- **Treat high-sensitivity endpoints as high-risk.** Anonymous or unauthenticated
+  access to PII, account, payment, or auth-required endpoints raises alerts on a
+  single request. Probe those deliberately and minimally, not iteratively.
+- **A block is a campaign event.** On a 403/challenge/ban, record it, and do not
+  retry the same request shape — repeated blocked retries deepen the ban and can
+  trigger further defensive hardening. Reassess, and only rotate circuit or
+  identity where scope and program rules allow it.
+- **Respect program rate limits and testing restrictions** exactly as recorded
+  for the campaign. When in doubt, probe slower and narrower.
+
 ## Operational Hygiene
 
 Every role and skill must actively clean up after every action. No research

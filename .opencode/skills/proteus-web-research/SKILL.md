@@ -15,9 +15,34 @@ program rules. Prefer local or explicitly authorized targets for active probes.
 ## Network Routing
 
 All outbound probes and web requests must be routed through Tor/Proxychains.
-Set `ALL_PROXY=socks5://localhost:9050` in the environment or prefix every
-network tool invocation with `proxychains4`. Never probe targets directly
-without the proxy layer unless explicitly authorized and documented.
+Prefix every network tool invocation with `proxychains4` (for example
+`proxychains4 curl ...`). Do **not** export `ALL_PROXY`, `HTTP_PROXY`, or
+`HTTPS_PROXY`: they conflict with proxychains and cause connection failures.
+Never probe targets directly without the proxy layer unless explicitly
+authorized and documented.
+
+## Live Probe Discipline
+
+On live third-party targets, the request *pattern* is what gets you blocked, not
+the payload content. Edges and bot managers score request shape and cadence and
+block before the backend, so a noisy sequence burns the endpoint before you can
+prove anything. Follow the Stealth and Rate Discipline section of the base
+research contract:
+
+- Send one probe, read the full response, then decide the next. Never fire a
+  batch of variations at the same live endpoint in quick succession.
+- Lead with the cleanest realistic value; do not open with payload folklore
+  (SQLi markers, format strings, repeated numeric probes) on a WAF-protected
+  endpoint.
+- Throttle with irregular delays. Stop probing an endpoint the moment a probe
+  confirms the flaw, and preserve access to build the PoC.
+- Treat anonymous access to PII/account/auth-required endpoints as
+  high-risk: minimal, deliberate probes only.
+- Treat a 403/challenge/ban as a campaign event: record it, do not retry the
+  same request shape, and reassess.
+
+Broad, fast probing is only acceptable on local, OSS, or private-lab surfaces
+you fully control.
 
 ## Operating Method
 
@@ -50,9 +75,15 @@ without the proxy layer unless explicitly authorized and documented.
 ## Anti-Patterns
 
 - Do not spray generic payloads or scanner checks.
+- Do not batch multiple payload variations at one live endpoint in quick
+  succession; that burst is a scanner signature that blocks you on pattern alone.
+- Do not keep re-confirming a flaw on a live endpoint after the first positive
+  signal; over-confirmation burns the source and blocks future PoC work.
 - Do not treat 500s, noisy errors, or cosmetic client bugs as findings without
   root cause and realistic impact.
 - Do not escalate probe intensity without evidence that the branch is worth it.
+- Do not retry the same request shape after a 403/challenge/ban; it deepens the
+  block and can trigger further defensive hardening.
 - Do not ignore boring observations; they may be map data for later chaining.
 
 Required output:

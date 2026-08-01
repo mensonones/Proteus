@@ -39,10 +39,24 @@ call that research.
 - Mutate authority context: tenant/user/project/env/runtime/build mode when the
   target legitimately supports those dimensions.
 
+## Live Target Constraint
+
+Multi-case, multi-mutation fuzzing is for local, OSS, or private-lab surfaces you
+fully control. Against a live authorized remote target it must not become a burst
+of variations: an edge or bot manager reads that burst as a scanner signature and
+blocks the endpoint on request pattern alone, before the backend responds,
+burning it for any later PoC. On live targets, follow the Stealth and Rate
+Discipline section of the base research contract — serialize probes one at a
+time, throttle with jitter, lead with the cleanest realistic value, and stop the
+moment a probe confirms the primitive. Move heavy mutation work into a local
+harness or lab replica instead of hammering the live endpoint.
+
 ## Anti-Patterns
 
 - Do not run generic exploit payload packs unless a specific target invariant
   justifies them.
+- Do not batch payload variations at a live endpoint; against live targets,
+  serialize and throttle per the base contract's Stealth and Rate Discipline.
 - Do not use unsafe production-style destructive probes. Stay in local/OSS or
   authorized lab scope.
 - Do not treat crashes, errors, or DoS as findings unless they contradict

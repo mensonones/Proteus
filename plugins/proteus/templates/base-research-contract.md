@@ -187,3 +187,11 @@ Every final output and checkpoint must include:
 This is not a checkbox. Include short evidence of how the contract was followed.
 If you deviated, name the deviation, repair it, and continue from the corrected
 state.
+
+`heuristicCoverage` uses the canonical family slugs from
+`heuristic-vocabulary.md`. List only the families you actually reasoned about on
+your assigned surface — do not pad, and do not invent ad-hoc strings. It is a
+shared vocabulary for auditing coverage against skipped surfaces, not a list to
+complete: leaving a family off is expected whenever the surface does not exhibit
+its signals. If you need a family that is not in the vocabulary, add it there
+first so it stays auditable.

@@ -62,6 +62,11 @@ Every specialist output, checkpoint, and final round summary must include:
 If the role deviated from the contract, it must name the deviation, repair it,
 and continue from the corrected state.
 
+`heuristicCoverage` entries are canonical family slugs from
+`plugins/proteus/templates/heuristic-vocabulary.md`. They are a shared
+vocabulary for auditing coverage against skipped surfaces, not a checklist to
+complete — see the coverage-audit step below.
+
 ## Coordinator Responsibilities
 
 The coordinator must:
@@ -74,8 +79,22 @@ The coordinator must:
 - delegate bounded fronts to the right skill or role;
 - keep memory current as work changes future decisions;
 - enforce validation gates and anti-slop checks;
+- audit heuristic coverage against surfaces after each round (see below);
 - kill, downgrade, watch, or promote based on evidence;
 - checkpoint after meaningful progress or branch-score changes.
+
+### Coverage audit
+
+After each round, cross the union of every specialist's `heuristicCoverage`
+against the recorded surfaces — selected *and* skipped. Using the family signals
+in `plugins/proteus/templates/heuristic-vocabulary.md`, for each
+`(surface, family)` pair where the surface exhibits the family's signals but no
+role declared that family and no "skipped surfaces and why" note justifies it,
+either assign the gap to the owning role next round or record an explicit waiver
+with a reason. This is a completeness ruler for silent omission, not a checklist:
+the search stays primitive-first, and a family left off a surface that does not
+exhibit its signals is expected, not a gap. An unexplained `(surface, family)`
+gap is a research-state defect to close, never promoted as a finding.
 
 Use this loop:
 

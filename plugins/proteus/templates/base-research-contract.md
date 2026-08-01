@@ -57,16 +57,23 @@ If the bundled script is not reachable, inline the steps:
 # install if missing (apt/dnf/pacman/brew)
 if ! command -v tor &>/dev/null; then sudo apt-get install -y tor proxychains4; fi
 sudo systemctl stop tor 2>/dev/null; sudo systemctl disable tor 2>/dev/null || true
-# start ephemeral (not as a systemd service)
+# start ephemeral (not as a systemd service) on the configured SOCKS port
+TOR_SOCKS_PORT="${TOR_SOCKS_PORT:-9050}"
 mkdir -p /tmp/tor-ephemeral
-nohup tor --SocksPort 9050 --DataDirectory /tmp/tor-ephemeral --PidFile /tmp/tor-ephemeral.pid > /tmp/tor-ephemeral/nohup.out 2>&1 &
+nohup tor --SocksPort "$TOR_SOCKS_PORT" --DataDirectory /tmp/tor-ephemeral --PidFile /tmp/tor-ephemeral.pid > /tmp/tor-ephemeral/nohup.out 2>&1 &
+# generate a proxychains config pinned to the SAME port. Do NOT rely on the
+# system /etc/proxychains4.conf — it hardcodes 9050 and would ignore
+# TOR_SOCKS_PORT, sending traffic to the wrong (or no) SOCKS port.
+PXCONF=/tmp/tor-ephemeral/proxychains-runtime.conf
+printf 'strict_chain\nproxy_dns\nremote_dns_subnet 224\n[ProxyList]\nsocks5 127.0.0.1 %s\n' "$TOR_SOCKS_PORT" > "$PXCONF"
 ```
 
-*Route every outbound call through proxychains only:*
+*Route every outbound call through proxychains only (force the pinned config
+with `-f "$PXCONF"` so the configured port is honored):*
 ```bash
-proxychains4 curl ...
-proxychains4 wget ...
-proxychains4 python3 script.py
+proxychains4 -f "$PXCONF" curl ...
+proxychains4 -f "$PXCONF" wget ...
+proxychains4 -f "$PXCONF" python3 script.py
 ```
 
 Do **NOT** export `ALL_PROXY` or `HTTP_PROXY` — they conflict with
@@ -75,7 +82,7 @@ syscalls (curl, wget, python requests, Go net/http) at the libc level.
 
 *Verify circuit (optional, once per bootstrap):*
 ```bash
-proxychains4 curl -s https://check.torproject.org/api/ip | grep -i '"IsTor":\s*true'
+proxychains4 -f "$PXCONF" curl -s https://check.torproject.org/api/ip | grep -i '"IsTor":\s*true'
 ```
 
 *Teardown (during scrub — mandatory before returning):*

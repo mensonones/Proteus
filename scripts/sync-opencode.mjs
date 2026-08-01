@@ -25,6 +25,10 @@ const skillMap = [
 
 syncDirectory(path.join(pluginRoot, "agents"), path.join(openCodeRoot, "agents"));
 syncDirectory(path.join(pluginRoot, "templates"), path.join(openCodeRoot, "templates"));
+// Mirror the lifecycle scripts (tor-ephemeral.sh et al.) so OpenCode is
+// self-contained: the templates reference these by path and cannot rely on the
+// Proteus repo being the working directory when running against a target.
+syncDirectory(path.join(pluginRoot, "scripts"), path.join(openCodeRoot, "scripts"));
 syncCommand();
 syncSkills();
 

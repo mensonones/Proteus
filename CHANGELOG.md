@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.1.7 - 2026-08-01
+
+### Added
+
+- `waf-bypass` skill for authorized edge-WAF and request-filter evasion research. It treats the filter as a blackbox component, classifies the block (egress reputation vs allowlist posture vs payload signature), and mutates one dimension at a time (method, encoding, structural, header, body) to learn how the filter discriminates benign from suspect input instead of spraying payloads.
+- `waf-probe.sh`, a calibrated block/pass matrix probe, ships bundled as a skill resource under `scripts/` (with a request budget, explicit rate limiting, and raw artifacts for evidence) rather than a standalone runtime script.
+
+### Changed
+
+- `sync-opencode` now mirrors `scripts/` and `references/` resources for any skill that carries them, instead of hardcoding `mobile-reversing`, so bundled skill automation reaches the OpenCode surface.
+
 ## 2.1.6 - 2026-08-01
 
 ### Fixed

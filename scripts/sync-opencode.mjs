@@ -6,6 +6,13 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."
 const pluginRoot = path.join(repoRoot, "plugins", "proteus");
 const openCodeRoot = path.join(repoRoot, ".opencode");
 
+// The plugin docs reference the lifecycle scripts as `plugins/proteus/scripts/`,
+// a path that only exists in the Proteus repo/plugin layout. On the OpenCode
+// surface the same scripts are mirrored under `.opencode/scripts/`, so rewrite
+// the references to point there.
+const PLUGIN_SCRIPTS_PATH = "plugins/proteus/scripts/";
+const OPENCODE_SCRIPTS_PATH = ".opencode/scripts/";
+
 const skillMap = [
   ["continuous-vuln-research", "proteus"],
   ["chaining", "proteus-chaining"],
@@ -29,8 +36,28 @@ syncDirectory(path.join(pluginRoot, "templates"), path.join(openCodeRoot, "templ
 // self-contained: the templates reference these by path and cannot rely on the
 // Proteus repo being the working directory when running against a target.
 syncDirectory(path.join(pluginRoot, "scripts"), path.join(openCodeRoot, "scripts"));
+rewriteTemplateScriptPaths();
 syncCommand();
 syncSkills();
+
+function rewriteScriptPaths(content) {
+  return content.replaceAll(PLUGIN_SCRIPTS_PATH, OPENCODE_SCRIPTS_PATH);
+}
+
+function rewriteTemplateScriptPaths() {
+  const templatesDir = path.join(openCodeRoot, "templates");
+  for (const entry of fs.readdirSync(templatesDir)) {
+    if (!entry.endsWith(".md")) {
+      continue;
+    }
+    const filePath = path.join(templatesDir, entry);
+    const original = fs.readFileSync(filePath, "utf8");
+    const rewritten = rewriteScriptPaths(original);
+    if (rewritten !== original) {
+      fs.writeFileSync(filePath, rewritten);
+    }
+  }
+}
 
 function syncDirectory(source, destination) {
   if (!fs.existsSync(source)) {
@@ -48,7 +75,7 @@ function syncCommand() {
     throw new Error(`missing source command: ${source}`);
   }
   fs.mkdirSync(path.dirname(destination), { recursive: true });
-  fs.copyFileSync(source, destination);
+  fs.writeFileSync(destination, rewriteScriptPaths(fs.readFileSync(source, "utf8")));
 }
 
 function syncSkills() {
@@ -94,6 +121,7 @@ function toOpenCodeSkill(content, sourceName, openCodeName) {
   let output = content.replace(new RegExp(`^name: ${escapeRegExp(sourceName)}$`, "m"), `name: ${openCodeName}`);
 
   output = replaceSkillReferences(output);
+  output = rewriteScriptPaths(output);
 
   if (sourceName === "codebase-research") {
     output = output.replace("Use when Codex must understand", "Use when OpenCode should understand");

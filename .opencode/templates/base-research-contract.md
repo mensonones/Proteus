@@ -49,7 +49,7 @@ the coordinator delegates teardown.
 
 *Bootstrap (first coordinator tool action, before inspection or MCP calls):*
 ```bash
-bash plugins/proteus/scripts/tor-ephemeral.sh bootstrap
+bash .opencode/scripts/tor-ephemeral.sh bootstrap
 ```
 
 If the bundled script is not reachable, inline the steps:
@@ -87,12 +87,12 @@ proxychains4 -f "$PXCONF" curl -s https://check.torproject.org/api/ip | grep -i 
 
 *Teardown (during scrub — mandatory before returning):*
 ```bash
-bash plugins/proteus/scripts/tor-ephemeral.sh stop
+bash .opencode/scripts/tor-ephemeral.sh stop
 ```
 
 *Full purge (end of campaign or coordinator signal):*
 ```bash
-bash plugins/proteus/scripts/tor-ephemeral.sh purge   # stop + apt-get purge
+bash .opencode/scripts/tor-ephemeral.sh purge   # stop + apt-get purge
 ```
 
 ### Rules
@@ -113,8 +113,8 @@ bash plugins/proteus/scripts/tor-ephemeral.sh purge   # stop + apt-get purge
 - **Enforcement mode (optional, recommended):** Apply iptables rules that
   drop all non-Tor outbound traffic at the kernel level:
   ```bash
-  bash plugins/proteus/scripts/tor-ephemeral.sh enforce  # lock down
-  bash plugins/proteus/scripts/tor-ephemeral.sh relax    # undo (scrub)
+  bash .opencode/scripts/tor-ephemeral.sh enforce  # lock down
+  bash .opencode/scripts/tor-ephemeral.sh relax    # undo (scrub)
   ```
   In enforce mode, only the `tor` user can make outbound connections.
   Everything else — including the `webfetch` tool's internal HTTP client —
@@ -231,8 +231,8 @@ trace may persist on disk longer than strictly necessary.
     (`/tmp/tor-ephemeral`), and remove the PID file. On campaign end or
     coordinator signal, also purge the tor and proxychains packages. Use:
     ```bash
-    bash plugins/proteus/scripts/tor-ephemeral.sh stop  # every scrub
-    bash plugins/proteus/scripts/tor-ephemeral.sh purge # end of campaign
+    bash .opencode/scripts/tor-ephemeral.sh stop  # every scrub
+    bash .opencode/scripts/tor-ephemeral.sh purge # end of campaign
     ```
 
 ### Standing rules:

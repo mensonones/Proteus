@@ -1,5 +1,25 @@
 # Changelog
 
+## 2.1.9 - 2026-08-01
+
+### Changed
+
+- Wire the `waf-bypass` skill into the research flow so an edge-WAF / bot-manager
+  / Tor-wide 403 block triggers a fingerprint-and-classify pass instead of a
+  silent fall-back to archives/DNS or direct egress. The base research contract's
+  Authorized Direct Egress section now requires classifying the block (egress
+  reputation vs allowlist posture vs payload signature) before routing around it;
+  `web-research` routes WAF blocks to the skill and adds it to handoffs; and
+  `web-intel` signals `waf-bypass` rather than falling back to passive sources.
+
+### Added
+
+- Deterministic WAF-block gate in the MCP server: `record_evidence`,
+  `record_gate`, `record_decision`, `record_surface`, and `update_surface` now
+  emit a `blocker`-severity advisory (`waf_block_requires_probe`) when a record
+  describes an edge WAF / bot-manager / Tor-wide 403, requiring a `waf-bypass`
+  classification pass before the surface can be closed as a dead end.
+
 ## 2.1.8 - 2026-08-01
 
 ### Added

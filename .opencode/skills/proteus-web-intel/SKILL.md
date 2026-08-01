@@ -19,6 +19,13 @@ All web requests for intel gathering must go through Tor/Proxychains.
 Configure `ALL_PROXY=socks5://localhost:9050` or use `proxychains4` before
 every outbound tool call. Do not fetch directly without the proxy layer.
 
+If an in-scope live surface is hidden behind an edge WAF / bot manager (403 or
+challenge across assets on multiple Tor exits), do not silently fall back to
+Wayback/DNS/CT as the only source and call the surface unreachable: record the
+block as a blocker and signal the coordinator to run the `proteus-waf-bypass` skill to
+fingerprint and classify it. Archive/passive fallback is a supplement to a
+classified block, not a substitute for classifying it.
+
 ## Operating Method
 
 1. State the claim or uncertainty being checked.

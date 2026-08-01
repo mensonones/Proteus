@@ -129,10 +129,32 @@ nodes wholesale, which covers most paid bug-bounty scope. When every in-scope
 target 403s on every Tor exit, Tor-first probing deadlocks and staying on Tor
 produces no signal. This is a recurring reality, not an edge case.
 
+**Classify the block before you route around it.** A Tor-wide 403 is a blackbox
+component to fingerprint, not a wall to record and abandon. Before recording the
+surface as a dead end, falling back to archives/DNS, or escalating to direct
+egress, invoke the `waf-bypass` skill (`scripts/waf-probe.sh`) to fingerprint the
+filter and classify the block into one of three root causes, each with a
+different remedy:
+
+- **Egress reputation** (denies by source IP/ASN — the Tor case): the identical
+  benign request is denied from multiple exits. Remedy is egress rotation or, if
+  that fails, the Authorized Direct Egress flow below. Only this class justifies
+  going off Tor.
+- **Allowlist posture** (internal-only asset, 403 even from residential): kill the
+  surface as externally unreachable and record the evidence.
+- **Payload signature** (benign baseline passes, suspect mutation blocks on the
+  same egress): use the calibrated mutation matrix in the skill — direct egress
+  would not help.
+
+Record the block/pass matrix and fingerprint as evidence so future rounds do not
+re-walk the same denied path. Direct egress is the remedy for a *confirmed*
+egress-reputation block, never a reflex on the first 403.
+
 Direct (non-Tor) egress is an opt-in, per-campaign fallback, never automatic:
 
 1. Confirm the block is Tor-wide — multiple in-scope assets 403 on multiple
-   exits — not a single flaky circuit.
+   exits — not a single flaky circuit — and that `waf-bypass` classified it as
+   egress reputation (not payload signature, which egress rotation cannot fix).
 2. Record it as a blocker and surface it to the user with the evidence.
 3. Proceed on direct egress only after explicit user authorization for this
    campaign, and only under the program's safe harbor.

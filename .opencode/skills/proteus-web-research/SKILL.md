@@ -22,11 +22,16 @@ Never probe targets directly without the proxy layer unless explicitly
 authorized and documented.
 
 If the WAF blocks Tor exits wholesale (403 across in-scope assets on multiple
-exits), do not silently go direct: follow the Authorized Direct Egress flow in
-the base research contract (record blocker, get per-campaign user authorization
-under safe harbor, then direct egress). When the program requires an identifying
-header (for example `X-Bug-Bounty: <platform>-<handle>`), attach it to every
-request — on Tor and on direct egress alike.
+exits), do not silently go direct and do not fall back to archives/DNS as if the
+surface were dead: first invoke the `proteus-waf-bypass` skill (`scripts/waf-probe.sh`)
+to fingerprint the filter and classify the block (egress-reputation vs
+allowlist-posture vs payload-signature). Only a confirmed egress-reputation block
+justifies the Authorized Direct Egress flow in the base research contract (record
+blocker, get per-campaign user authorization under safe harbor, then direct
+egress); a payload-signature block is solved with the skill's mutation matrix, not
+by leaving Tor. When the program requires an identifying header (for example
+`X-Bug-Bounty: <platform>-<handle>`), attach it to every request — on Tor and on
+direct egress alike.
 
 ## Live Probe Discipline
 
@@ -64,7 +69,8 @@ you fully control.
    it, what authority decision could drift, what invariant was assumed?
 5. Hand narrow input-reaction questions to `proteus-fuzzing`; hand side-effect chains to
    `proteus-chaining`; hand concrete blockers to Cicada; hand novelty/timeline questions
-   to `proteus-web-intel`.
+   to `proteus-web-intel`; hand edge-WAF / bot-manager / Tor-wide 403 blocks that hide an
+   in-scope surface to `proteus-waf-bypass` before treating the surface as unreachable.
 
 ## Web Heuristics
 

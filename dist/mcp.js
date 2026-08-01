@@ -862,9 +862,8 @@ const tools = [
             revisitCondition: stringProp(),
             roi: objectProp("Optional ROI factor object.")
         }, ["root", "name"]),
-        handler: (input) => withDb(str(input.root), (db) => ({
-            ok: true,
-            id: db.addSurface({
+        handler: (input) => withDb(str(input.root), (db) => {
+            const id = db.addSurface({
                 name: str(input.name),
                 family: maybeStr(input.family) ?? "coordinator-supplied",
                 description: maybeStr(input.description) ?? "",
@@ -876,8 +875,10 @@ const tools = [
                 status: (maybeStr(input.status) ?? "active"),
                 roi: roiFromInput(objectValue(input.roi)),
                 revisitCondition: maybeStr(input.revisitCondition) ?? ""
-            })
-        }))
+            });
+            const advisories = wafBlockerAdvisories(str(input.name), maybeStr(input.description), maybeStr(input.revisitCondition), maybeStr(input.status));
+            return { ok: true, id, ...(advisories.length ? { advisories } : {}) };
+        })
     },
     {
         name: "proteus_record_hypothesis",
@@ -964,7 +965,10 @@ const tools = [
             });
             const campaignLink = linkRecordToActiveCampaign(db, "evidence", id, "has_evidence", `Evidence E${id} recorded in active campaign.`);
             return toolEnvelope({ entityType: "evidence", entityId: id }, {
-                advisories: campaignLinkAdvisories(db, campaignLink),
+                advisories: [
+                    ...campaignLinkAdvisories(db, campaignLink),
+                    ...wafBlockerAdvisories(str(input.title), maybeStr(input.body), maybeStr(input.command))
+                ],
                 stateDelta: { created: [{ entityType: "evidence", entityId: id }], linked: campaignLink ? [campaignLink] : [], updated: [] }
             });
         })
@@ -1006,6 +1010,7 @@ const tools = [
                     reason: "promotion, kill, or candidate decisions should remain auditable"
                 });
             }
+            advisories.push(...wafBlockerAdvisories(str(input.decision), str(input.reason)));
             return toolEnvelope({ entityType: "decision", entityId: id }, {
                 advisories,
                 stateDelta: {
@@ -1042,7 +1047,10 @@ const tools = [
             });
             const campaignLink = linkRecordToActiveCampaign(db, "gate", id, "has_validation_gate", `Validation gate G${id} recorded in active campaign.`);
             return toolEnvelope({ entityType: "gate", entityId: id }, {
-                advisories: campaignLinkAdvisories(db, campaignLink),
+                advisories: [
+                    ...campaignLinkAdvisories(db, campaignLink),
+                    ...wafBlockerAdvisories(str(input.gate), maybeStr(input.summary))
+                ],
                 stateDelta: { created: [{ entityType: "gate", entityId: id }], linked: campaignLink ? [campaignLink] : [], updated: [] }
             });
         })
@@ -1102,7 +1110,8 @@ const tools = [
                 revisitCondition: maybeStr(input.revisitCondition),
                 exhaustionLevel: maybeNum(input.exhaustionLevel)
             });
-            return { ok: true, id: input.id };
+            const advisories = wafBlockerAdvisories(maybeStr(input.status), maybeStr(input.revisitCondition));
+            return { ok: true, id: input.id, ...(advisories.length ? { advisories } : {}) };
         })
     },
     {
@@ -1349,6 +1358,38 @@ function linkRecordToActiveCampaign(db, entityType, entityId, relation, eventSum
         toType: entityType,
         toId: entityId
     };
+}
+// Strong single-signal terms: an edge WAF / bot manager is named or fingerprinted
+// directly. Any one of these on its own is enough to require a classification pass.
+const WAF_STRONG = /\bwaf\b|cloudflare|cf-mitigated|akamaighost|\bakamai\b|\bimperva\b|mod ?security|failover-waf|\bbot[-\s]?manager\b|just a moment|attention required|sorry, you have been blocked|\b_abck\b|\bbm_sz\b/i;
+// Block outcome terms that only imply a WAF block when paired with a Tor/edge/wholesale
+// context — this keeps a bare "403" or "forbidden" from firing on normal app responses.
+const WAF_BLOCK_OUTCOME = /\b403\b|forbidden|blocked|\bchallenge\b|access denied|\bdenied\b/i;
+const WAF_BLOCK_CONTEXT = /\btor\b|exit ?node|every exit|all exits|multiple exits|wholesale|edge[-\s]?block|bot[-\s]?score/i;
+function detectWafBlock(...texts) {
+    const blob = texts.filter((t) => Boolean(t && t.trim())).join("  ");
+    if (!blob.trim())
+        return false;
+    if (WAF_STRONG.test(blob))
+        return true;
+    return WAF_BLOCK_OUTCOME.test(blob) && WAF_BLOCK_CONTEXT.test(blob);
+}
+// Deterministic gate: any record that describes an edge WAF / bot-manager / Tor-wide
+// 403 must not become a "dead end" or a silent fall-back to archives/direct egress until
+// the waf-bypass skill has fingerprinted and classified the block. This wires the
+// waf-bypass skill into the flow so the trigger no longer depends on the model
+// spontaneously recalling it.
+function wafBlockerAdvisories(...texts) {
+    if (!detectWafBlock(...texts))
+        return [];
+    return [
+        {
+            severity: "blocker",
+            code: "waf_block_requires_probe",
+            message: "This record describes an edge WAF / bot-manager / Tor-wide 403 block. Do NOT close the surface as a dead end, and do NOT fall back to archives or direct egress yet: first invoke the `waf-bypass` skill (scripts/waf-probe.sh) to fingerprint the filter and classify the block (egress-reputation vs allowlist-posture vs payload-signature), then record the block/pass matrix as evidence. Egress rotation / authorized direct egress is only the correct remedy for a confirmed egress-reputation block.",
+            reason: "an edge WAF 403 is a blackbox component to classify, not a wall to record and abandon"
+        }
+    ];
 }
 function campaignLinkAdvisories(db, link) {
     if (!link)

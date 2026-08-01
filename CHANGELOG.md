@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.1.8 - 2026-08-01
+
+### Added
+
+- `npm run release:local` (`scripts/update-local.mjs`): one command to bump the version (auto patch, or `minor`/`major`/explicit `X.Y.Z`) and refresh every local surface — build, OpenCode global install, Codex agents, and the Claude Code plugin cache + registry repoint — without committing. Each surface is best-effort and reported in a summary; the working tree is left modified for review.
+
 ## 2.1.7 - 2026-08-01
 
 ### Added

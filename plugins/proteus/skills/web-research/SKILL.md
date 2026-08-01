@@ -21,6 +21,13 @@ Prefix every network tool invocation with `proxychains4` (for example
 Never probe targets directly without the proxy layer unless explicitly
 authorized and documented.
 
+If the WAF blocks Tor exits wholesale (403 across in-scope assets on multiple
+exits), do not silently go direct: follow the Authorized Direct Egress flow in
+the base research contract (record blocker, get per-campaign user authorization
+under safe harbor, then direct egress). When the program requires an identifying
+header (for example `X-Bug-Bounty: <platform>-<handle>`), attach it to every
+request — on Tor and on direct egress alike.
+
 ## Live Probe Discipline
 
 On live third-party targets, the request *pattern* is what gets you blocked, not

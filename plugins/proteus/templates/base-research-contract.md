@@ -94,7 +94,9 @@ bash plugins/proteus/scripts/tor-ephemeral.sh purge   # stop + apt-get purge
 - The data directory (`/tmp/tor-ephemeral`) must be removed during scrub.
 - `ALL_PROXY`, `HTTP_PROXY`, `HTTPS_PROXY` must be unset during scrub.
 - If Tor is blocked by the target or unavailable after install, record the
-  limitation explicitly and mark the dependency as a blocker.
+  limitation explicitly and mark the dependency as a blocker, then follow the
+  Authorized Direct Egress subsection below. Do not silently continue and do not
+  auto-fall back to clearnet.
 - **Never use the host's built-in web fetch tool** (`webfetch`, `WebFetch`,
   `fetch_url`, or equivalent). These bypass the OS network stack and cannot
   be proxied through Tor. Every outbound HTTP/HTTPS request must go through
@@ -112,6 +114,38 @@ bash plugins/proteus/scripts/tor-ephemeral.sh purge   # stop + apt-get purge
   is blocked by the kernel before it leaves the machine. This is not a
   prompt-level suggestion; it is a netfilter rule that cannot be bypassed
   by ignoring instructions.
+
+### Authorized Direct Egress (WAF-blocked Tor)
+
+Modern WAFs (Akamai, AWS WAF/CloudFront, and similar) return 403 for Tor exit
+nodes wholesale, which covers most paid bug-bounty scope. When every in-scope
+target 403s on every Tor exit, Tor-first probing deadlocks and staying on Tor
+produces no signal. This is a recurring reality, not an edge case.
+
+Direct (non-Tor) egress is an opt-in, per-campaign fallback, never automatic:
+
+1. Confirm the block is Tor-wide — multiple in-scope assets 403 on multiple
+   exits — not a single flaky circuit.
+2. Record it as a blocker and surface it to the user with the evidence.
+3. Proceed on direct egress only after explicit user authorization for this
+   campaign, and only under the program's safe harbor.
+4. Attach the program identifier header (below) to every request so the traffic
+   is attributable to authorized research.
+5. Record the anonymization waiver as a campaign decision: what was authorized,
+   by whom, and under which safe harbor.
+
+Do not auto-fall back to clearnet. A WAF that blocks Tor specifically can be a
+deanonymization trap that forces your real IP; the human authorization gate is
+the safeguard.
+
+### Program Identifier Header
+
+Many programs require an identifying header on all test traffic (for example
+`X-Bug-Bounty: <platform>-<handle>`). Record the required header as structured
+campaign state at setup and attach it to every outbound request — on Tor and on
+direct egress alike. It is both a compliance requirement and an anti-burn
+measure: it lets the target SOC tell authorized research from an anonymous
+attacker and deprioritize instead of edge-blocking.
 
 ## Stealth and Rate Discipline (live targets)
 
@@ -148,6 +182,14 @@ probing is fine.
   retry the same request shape — repeated blocked retries deepen the ban and can
   trigger further defensive hardening. Reassess, and only rotate circuit or
   identity where scope and program rules allow it.
+- **A defensive reaction is corroboration, but it is one-shot.** A fast defensive
+  response right after a probe — an edge block within minutes, CORS tightened
+  from `*` to a specific origin between rounds, a config change — is evidence you
+  touched something real and can strengthen a report. A useful layer
+  discriminator: an op-specific 403 at the edge (no backend gateway headers,
+  static error HTML) versus the backend actually being reached. Capture it as
+  evidence, but do not chase or re-trigger it: provoking the reaction is exactly
+  what burns the source.
 - **Respect program rate limits and testing restrictions** exactly as recorded
   for the campaign. When in doubt, probe slower and narrower.
 

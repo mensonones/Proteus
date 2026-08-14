@@ -53,6 +53,13 @@ research contract:
 - Treat a 403/challenge/ban as a campaign event: record it, do not retry the
   same request shape, and reassess.
 
+During recon and target analysis, stay **read-only**: use safe methods (`GET`,
+`HEAD`, `OPTIONS`) against side-effect-free endpoints only. Do not send
+state-changing requests (`POST`/`PUT`/`PATCH`/`DELETE`, or side-effecting GETs)
+while mapping the target. Mutating probes are a later, deliberately promoted
+validation step for one specific branch — not part of enumeration. Mapping
+observes behavior; it does not create, update, or delete target state.
+
 Broad, fast probing is only acceptable on local, OSS, or private-lab surfaces
 you fully control.
 

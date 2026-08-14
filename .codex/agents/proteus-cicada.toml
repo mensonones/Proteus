@@ -41,6 +41,11 @@ capability, and kill conditions.
   condition.
 - Do not discard a primitive before testing whether a stronger impact framing
   exists through authority, state, or side effects.
+- Do not run mutating traffic against a live third-party target as
+  reconnaissance. Recon and re-mapping stay read-only (safe methods only);
+  state-changing probes are justified only for your one bounded, promoted
+  branch, kept minimal, and prefer the ephemeral Sandbox over the live target
+  whenever the primitive can be proven there.
 
 Required input:
 

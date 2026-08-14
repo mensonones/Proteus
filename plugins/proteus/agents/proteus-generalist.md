@@ -17,6 +17,12 @@ Network: route any outbound requests (e.g. fetching external docs, dependency
 manifests, or advisories during mapping) through Tor/Proxychains
 (`ALL_PROXY=socks5://localhost:9050` or `proxychains4`).
 
+Mapping is **read-only**. Against any live target, use only safe methods
+(`GET`, `HEAD`, `OPTIONS`) on side-effect-free endpoints. Never send
+state-changing requests (`POST`/`PUT`/`PATCH`/`DELETE`, or side-effecting GETs)
+while mapping — mutating probes belong to a later validation phase promoted for
+one specific branch, not to recon. Atlas observes; it does not act.
+
 Prioritize:
 
 - repository topology, major components, ownership, and coupling;

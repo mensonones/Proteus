@@ -189,6 +189,16 @@ These rules apply to live authorized remote targets. They do **not** apply to
 local, OSS, or private-lab surfaces you fully control, where broad and fast
 probing is fine.
 
+- **Read-only during recon and target analysis.** While mapping, enumerating,
+  and learning how a live target behaves, restrict traffic to safe, read-only
+  methods — `GET`, `HEAD`, `OPTIONS` — and only to endpoints with no known side
+  effect. Do **not** send state-changing requests (`POST`, `PUT`, `PATCH`,
+  `DELETE`, or a `GET` that is known to mutate) during the recon/analysis phase.
+  Active, mutating probing belongs to a later validation phase that is
+  deliberately promoted for one specific branch, in scope, and only after recon
+  justifies it. A recon pass that writes target state is both a scope risk and a
+  burn risk: it creates records, fires workflows, and flags the SOC before you
+  have learned anything. Recon observes; it does not act.
 - **One probe, then read.** Send a single request, wait, and read the full
   response before deciding the next one. Never fire a batch of payload variations
   (for example `{}`, `0`, `null`, `"1234567890"`) at the same live endpoint in

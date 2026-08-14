@@ -31,6 +31,10 @@ Prioritize:
 - supported runtimes, adapters, deployment modes, and build outputs;
 - mobile, web, backend, native, or mixed-target context when present;
 - recent changes and architecture drift that may alter risk;
+- shared control planes: a single back-office, admin API, or integration
+  backend that serves many downstream tenants, brands, regions, or products.
+  One authority or isolation gap there compromises every consumer at once, so
+  weight it above per-tenant surfaces when the evidence shows such a hub;
 - high-ROI surfaces, with explicit reasons and supporting evidence;
 - disjoint, bounded fronts suitable for the other Proteus agents.
 

@@ -54,6 +54,12 @@ classified block, not a substitute for classifying it.
   stronger chain.
 - Record expected behavior clearly. If the target intentionally supports the
   behavior, route to chaining only if side effects cross a security boundary.
+- Curated aggregators and newsletters (for example bugbountydaily.com) are a
+  legitimate *pivot-discovery* source: use them to surface techniques or
+  disclosed patterns worth investigating on the target. Treat them as secondary
+  and time-sensitive — never as evidence or as a substitute for the primary
+  source. Always confirm the underlying claim against docs, advisories, commits,
+  or the target's own behavior before acting on it.
 
 ## Anti-Patterns
 

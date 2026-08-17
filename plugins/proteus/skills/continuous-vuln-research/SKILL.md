@@ -442,15 +442,22 @@ variables; route individual commands through `proxychains4`.
 - **FORBIDDEN to use `webfetch` or host built-in fetch tools.** They bypass the OS and do not pass through Tor. All HTTP/HTTPS requests must be made via bash: `proxychains4 curl`, `proxychains4 wget`, etc.
 - Verify circuit: `proxychains4 curl -s https://check.torproject.org/api/ip`
 
-### Enforcement (optional, recommended)
+### Enforcement (opt-in, OFF by default — do not enable reflexively)
+A kernel-level DROP-all for non-Tor egress. It locks down the **entire host**,
+not just the campaign, and a stale rule leaves the machine with no internet
+until relaxed. Enable it **only when the user explicitly asks** for a hard
+kill-switch; proxychains routing already provides isolation without it. Never
+run it as a default part of bootstrap.
 ```bash
 sudo bash plugins/proteus/scripts/tor-ephemeral.sh enforce
 ```
-Applies iptables rules dropping all outbound TCP not passing through Tor at the kernel level. Blocks host webfetch too.
+The script refuses to apply the lockdown unless Tor is already working and its
+uid is known, and auto-relaxes if host connectivity breaks after the rules go
+live (fails open on the host). Recovery if a machine loses internet:
 ```bash
 sudo bash plugins/proteus/scripts/tor-ephemeral.sh relax
 ```
-Removes the rules. Use before rebuilding circuits or during scrub.
+Always relax before rebuilding circuits and during scrub.
 
 ### Teardown (mandatory in every scrub)
 ```bash

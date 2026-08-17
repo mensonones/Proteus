@@ -15,9 +15,11 @@ exact queries, dates, links, and conclusions.
 
 ## Network Routing
 
-All web requests for intel gathering must go through Tor/Proxychains.
-Configure `ALL_PROXY=socks5://localhost:9050` or use `proxychains4` before
-every outbound tool call. Do not fetch directly without the proxy layer.
+All web requests for intel gathering must go through Tor/Proxychains. Prefix
+every outbound tool call with `proxychains4` (for example `proxychains4 curl`).
+Do **not** export `ALL_PROXY`/`HTTP_PROXY`/`HTTPS_PROXY`: they conflict with
+proxychains and break connections. Do not fetch directly without the proxy
+layer.
 
 If an in-scope live surface is hidden behind an edge WAF / bot manager (403 or
 challenge across assets on multiple Tor exits), do not silently fall back to

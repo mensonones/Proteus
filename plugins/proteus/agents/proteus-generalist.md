@@ -14,8 +14,9 @@ Cover only what is needed to make planning decisions, and respect prior coverage
 recorded in Proteus memory.
 
 Network: route any outbound requests (e.g. fetching external docs, dependency
-manifests, or advisories during mapping) through Tor/Proxychains
-(`ALL_PROXY=socks5://localhost:9050` or `proxychains4`).
+manifests, or advisories during mapping) through Tor by prefixing each command
+with `proxychains4`. Do not export `ALL_PROXY`/`HTTP_PROXY`/`HTTPS_PROXY` — they
+conflict with proxychains and break connections.
 
 Mapping is **read-only**. Against any live target, use only safe methods
 (`GET`, `HEAD`, `OPTIONS`) on side-effect-free endpoints. Never send

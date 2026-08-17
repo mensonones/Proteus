@@ -89,11 +89,19 @@ target-specific vulnerability claims.
 **CRITICAL MANDATORY FIRST STEP**: You MUST execute the Tor bootstrap script via bash as your VERY FIRST tool call in this session.
 You are strictly FORBIDDEN from using any MCP tools (e.g., `proteus_record_surface`, `proteus_plan_round`, etc.) or making any plans until you have successfully executed the bootstrap script and established the circuit.
 
-### Bootstrap and Enforcement
+### Bootstrap
 ```bash
-bash plugins/proteus/scripts/tor-ephemeral.sh bootstrap && sudo bash plugins/proteus/scripts/tor-ephemeral.sh enforce
+bash plugins/proteus/scripts/tor-ephemeral.sh bootstrap
 ```
-Starts the circuit (or uses the global one), waits for 100% bootstrap, and applies iptables rules dropping all outbound TCP not passing through Tor at the kernel level. Blocks host webfetch too.
+Starts the circuit (or uses the global one) and waits for 100% bootstrap. This is the mandatory first step. It does **not** touch the host firewall.
+
+### Enforcement (opt-in, OFF by default — do NOT run reflexively)
+Do not run this as part of bootstrap. It is a kernel-level DROP-all that cuts the **entire host** off the internet — not just this campaign — and a stale rule leaves the machine unusable until relaxed. Proxychains routing already isolates traffic without it. Enable it **only when the user explicitly asks** for a hard kill-switch:
+```bash
+sudo bash plugins/proteus/scripts/tor-ephemeral.sh enforce   # opt-in lockdown
+sudo bash plugins/proteus/scripts/tor-ephemeral.sh relax     # recovery / undo
+```
+The script refuses to lock down unless Tor is already working and its uid is known, and auto-relaxes if host connectivity breaks after the rules go live. If a machine ever loses internet after a run, recover with `sudo bash plugins/proteus/scripts/tor-ephemeral.sh relax`.
 
 ### Routing
 - Use **exclusively** `proxychains4` for all outbound requests. **Never** export `ALL_PROXY` yourself — it conflicts with proxychains and breaks connections.

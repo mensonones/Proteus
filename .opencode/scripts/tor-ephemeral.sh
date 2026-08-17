@@ -206,17 +206,40 @@ apply_enforcement_rules() {
   sudo "$ipt" -I OUTPUT 1 -j "$CHAIN"
 }
 
+# Confirm Tor is actually carrying traffic before we DROP everything else.
+# Returns 0 only when a proxychained request comes back as a Tor exit.
+tor_is_working() {
+  run_proxychains -q curl -s --max-time 15 https://check.torproject.org/api/ip 2>/dev/null \
+    | grep -qi '"IsTor":\s*true'
+}
+
 enforce_kernel() {
   require_root "enforce" || return 1
+
+  # SAFETY GATE 1: refuse to lock the machine down unless we can allow tor's own
+  # egress. Applying a DROP-all rule without an --uid-owner ACCEPT for tor drops
+  # tor's NEW circuit connections too, leaving the host with no internet AND no
+  # working Tor — the exact "machine unusable" failure. Abort instead.
   local tor_uid
   tor_uid=$(resolve_tor_uid || true)
-  if [ -n "$tor_uid" ]; then
-    log "tor traffic will be allowed by owner uid=$tor_uid"
-  else
-    log "WARNING: could not resolve tor uid; set TOR_UID=<uid> so tor can build"
-    log "         new circuits. Proceeding with established-only tor allowance."
+  if [ -z "$tor_uid" ]; then
+    log "ABORT: cannot resolve the tor uid, so a kernel DROP-all would also block"
+    log "       tor's own circuits and cut the host off entirely. Start tor first"
+    log "       (bootstrap) or set TOR_UID=<uid>, then re-run enforce. No rules"
+    log "       were applied; host networking is untouched."
+    return 1
   fi
 
+  # SAFETY GATE 2: tor must already be carrying traffic. Locking down before tor
+  # works would brick the host until someone runs relax.
+  if ! tor_is_working; then
+    log "ABORT: tor is not confirmed working (no Tor exit on port $TOR_SOCKS_PORT)."
+    log "       Run 'bootstrap' and wait for a circuit before enforce, so the"
+    log "       lockdown never cuts the host off. No rules were applied."
+    return 1
+  fi
+
+  log "tor traffic will be allowed by owner uid=$tor_uid"
   apply_enforcement_rules iptables "$tor_uid"
   log "iptables (IPv4) enforcement ON — all non-Tor outbound TCP/UDP is DROPped"
 
@@ -235,7 +258,21 @@ enforce_kernel() {
     fi
   fi
 
-  log "  (webfetch, direct curl, plaintext DNS, and host-level HTTP will fail)"
+  # SAFETY GATE 3: verify the host still reaches the internet *through Tor* after
+  # the rules are live. If the lockdown killed connectivity (e.g. tor's uid does
+  # not match the running circuit, or DNS now leaks and is dropped), auto-relax
+  # so the machine is never left offline. Fail closed on the rules, open on the
+  # host: an unusable machine is worse than a missing lockdown.
+  if tor_is_working; then
+    log "verified: host still reaches the internet through Tor under enforcement"
+    log "  (webfetch, direct curl, plaintext DNS, and host-level HTTP will fail)"
+  else
+    log "ERROR: connectivity through Tor broke after enforcement was applied."
+    log "       Rolling the rules back automatically so the host is not left"
+    log "       offline. Investigate tor uid / DNS before retrying enforce."
+    relax_enforcement || log "WARNING: auto-relax failed — run 'sudo $0 relax' now"
+    return 1
+  fi
 }
 
 relax_enforcement() {

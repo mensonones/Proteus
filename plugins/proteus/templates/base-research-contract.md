@@ -110,17 +110,22 @@ bash plugins/proteus/scripts/tor-ephemeral.sh purge   # stop + apt-get purge
   `proxychains4 curl` (or `proxychains4 wget`, `proxychains4 python3`) via
   bash. If the host only exposes `webfetch` and no bash tool is available,
   record the limitation as a blocker — do not use `webfetch` as a fallback.
-- **Enforcement mode (optional, recommended):** Apply iptables rules that
-  drop all non-Tor outbound traffic at the kernel level:
+- **Enforcement mode (opt-in, OFF by default — do not enable reflexively):**
+  A kernel-level lockdown that DROPs all non-Tor outbound traffic. It is a
+  blunt, host-wide instrument: it cuts the **entire machine** off the internet,
+  not just this campaign, and a stale rule leaves the host unusable until it is
+  relaxed. **Enable it only when the user explicitly asks for a hard kill-switch
+  for a specific campaign** — never as a default step of bootstrap. Proxychains
+  routing is the normal isolation mechanism; enforce is not required for it.
   ```bash
-  bash plugins/proteus/scripts/tor-ephemeral.sh enforce  # lock down
-  bash plugins/proteus/scripts/tor-ephemeral.sh relax    # undo (scrub)
+  sudo bash plugins/proteus/scripts/tor-ephemeral.sh enforce  # lock down (opt-in)
+  sudo bash plugins/proteus/scripts/tor-ephemeral.sh relax     # undo (mandatory on scrub)
   ```
-  In enforce mode, only the `tor` user can make outbound connections.
-  Everything else — including the `webfetch` tool's internal HTTP client —
-  is blocked by the kernel before it leaves the machine. This is not a
-  prompt-level suggestion; it is a netfilter rule that cannot be bypassed
-  by ignoring instructions.
+  The script refuses to apply the lockdown unless Tor is already confirmed
+  working and its uid is known, and auto-relaxes if connectivity breaks after
+  the rules go live — so it fails open on the host rather than bricking it. If a
+  machine ever loses internet after a Proteus run, the recovery is
+  `sudo bash plugins/proteus/scripts/tor-ephemeral.sh relax`.
 
 ### Authorized Direct Egress (WAF-blocked Tor)
 

@@ -85,7 +85,12 @@ assertFile(path.join(repoRoot, ".opencode", "skills", "proteus", "SKILL.md"));
 assertFile(path.join(repoRoot, ".opencode", "skills", "proteus-mobile-reversing", "scripts", "extract_mobile_artifacts.py"));
 const openCodeCommand = fs.readFileSync(path.join(repoRoot, ".opencode", "commands", "proteus.md"), "utf8");
 const openCodeSkill = fs.readFileSync(path.join(repoRoot, ".opencode", "skills", "proteus", "SKILL.md"), "utf8");
-assert(openCodeCommand === canonicalCommand, "Generated OpenCode /proteus command is stale");
+// sync-opencode.mjs rewrites `plugins/proteus/scripts/` -> `.opencode/scripts/`
+// in the generated command (the scripts are mirrored under .opencode/), so the
+// generated file is expected to differ from the canonical one by exactly that
+// path rewrite. Compare against the rewritten canonical, not the raw one.
+const expectedOpenCodeCommand = canonicalCommand.replaceAll("plugins/proteus/scripts/", ".opencode/scripts/");
+assert(openCodeCommand === expectedOpenCodeCommand, "Generated OpenCode /proteus command is stale");
 assert(openCodeSkill.includes(torPreflightMarker), "Generated OpenCode Proteus skill is missing the mandatory Tor preflight");
 const openCodeAgents = fs.readdirSync(path.join(repoRoot, ".opencode", "agents")).filter((name) => name.startsWith("proteus-") && name.endsWith(".md"));
 assert(openCodeAgents.length === roleFiles.length, "OpenCode agent count does not match canonical role contracts");

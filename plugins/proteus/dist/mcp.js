@@ -1183,6 +1183,30 @@ const tools = [
         })
     },
     {
+        name: "proteus_query_path",
+        title: "Query Entity Path",
+        description: "Walk the entity-link graph from a start entity up to a few hops and return the connecting paths. Where proteus_query_surfaces/list_records answer 'what exists', this answers 'how does this node connect to that one' — the chaining question: reconstruct a path from a primitive/branch through evidence, decisions, and gates to an impact instead of only listing one-hop links. Links are followed both ways unless directed is true; toType keeps only paths ending at that entity type.",
+        inputSchema: schema({
+            root: stringProp("Target root path."),
+            fromType: stringProp("Start entity type (e.g. branch, surface, evidence, gate, decision, candidate)."),
+            fromId: numberProp("Start entity id."),
+            maxDepth: numberProp("Max hops to traverse (1..6, default 3)."),
+            toType: stringProp("Optional: only return paths that end at this entity type."),
+            directed: booleanProp("Follow links from->to only (default false: both directions)."),
+            limit: numberProp("Max paths to return (default 25).")
+        }, ["root", "fromType", "fromId"]),
+        handler: (input) => withDb(str(input.root), (db) => ({
+            paths: db.queryPath({
+                fromType: str(input.fromType),
+                fromId: num(input.fromId, 0),
+                maxDepth: typeof input.maxDepth === "number" ? input.maxDepth : undefined,
+                toType: maybeStr(input.toType),
+                directed: input.directed === true,
+                limit: typeof input.limit === "number" ? input.limit : undefined
+            })
+        }))
+    },
+    {
         name: "proteus_export",
         title: "Export Markdown",
         description: "Export Markdown views from memory.",

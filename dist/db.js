@@ -315,6 +315,61 @@ class ProteusDb {
             (link.toType === input.entityType && link.toId === input.entityId));
         return rows.slice(0, input.limit ?? 50);
     }
+    // Walk the entity-link graph from a start node up to `maxDepth` hops and return
+    // the connecting paths. Single-hop `listEntityLinks` answers "what touches this
+    // node"; this answers "how does this node connect to that one" — the chain
+    // question. Links are followed in both directions by default (a chain can run
+    // either way through a relation); set `directed` to follow from->to only.
+    // `toType` keeps only paths that end at that entity type (e.g. branch -> gate).
+    queryPath(input) {
+        const maxDepth = Math.max(1, Math.min(input.maxDepth ?? 3, 6));
+        const limit = Math.max(1, Math.min(input.limit ?? 25, 100));
+        const links = this.listEntityLinks({ limit: 100000 });
+        const key = (type, id) => `${type}#${id}`;
+        const start = { type: input.fromType, id: input.fromId };
+        const paths = [];
+        const queue = [
+            { node: start, nodes: [start], edges: [], visited: new Set([key(start.type, start.id)]) }
+        ];
+        while (queue.length > 0 && paths.length < limit) {
+            const frame = queue.shift();
+            if (frame.edges.length >= maxDepth)
+                continue;
+            for (const link of links) {
+                // Determine the neighbour reachable from the current node via this link.
+                let next = null;
+                let direction = null;
+                if (link.fromType === frame.node.type && link.fromId === frame.node.id) {
+                    next = { type: link.toType, id: link.toId };
+                    direction = "forward";
+                }
+                else if (!input.directed && link.toType === frame.node.type && link.toId === frame.node.id) {
+                    next = { type: link.fromType, id: link.fromId };
+                    direction = "backward";
+                }
+                if (!next || !direction)
+                    continue;
+                const nextKey = key(next.type, next.id);
+                if (frame.visited.has(nextKey))
+                    continue;
+                const edges = [
+                    ...frame.edges,
+                    { relation: link.relation, direction, note: link.note, confidence: link.confidence }
+                ];
+                const nodes = [...frame.nodes, next];
+                const endpointMatches = !input.toType || next.type === input.toType;
+                if (endpointMatches) {
+                    paths.push({ nodes, edges, depth: edges.length });
+                    if (paths.length >= limit)
+                        break;
+                }
+                if (edges.length < maxDepth) {
+                    queue.push({ node: next, nodes, edges, visited: new Set([...frame.visited, nextKey]) });
+                }
+            }
+        }
+        return paths;
+    }
     addCampaignEvent(input) {
         const now = nowIso();
         const result = this.db

@@ -17,7 +17,12 @@ Start from primitives, side effects, invariants, and real attacker capability.
 
 1. State the exact observed behavior and current attacker capability.
 2. Map every component, cache, queue, file, policy, parser, identity, build step,
-   adapter, runtime mode, and cleanup path the behavior can influence.
+   adapter, runtime mode, and cleanup path the behavior can influence. Reuse what
+   memory already connects: `proteus_query_path` walks the recorded entity-link
+   graph from your primitive/branch several hops out (optionally toward a target
+   type such as a gate or impact record), reconstructing chains the links already
+   imply instead of re-deriving them. Record new connective edges with
+   `proteus_link_entities` so the next chain search is sharper.
 3. Generate 3-5 distinct chain hypotheses that are not just the obvious direct
    exploit path. At least one should be low-level, one cross-component, and one
    lifecycle/state-oriented when the target supports those dimensions.

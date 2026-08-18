@@ -154,6 +154,7 @@ try {
     "proteus_update_rounds",
     "proteus_query_revisit",
     "proteus_query_surfaces",
+    "proteus_query_path",
     "proteus_export",
     "proteus_lab_create",
     "proteus_record_global_learning",
@@ -633,6 +634,21 @@ try {
     name: "proteus_link_entities",
     arguments: { root: tmpRoot, fromType: "campaign", fromId: 1, relation: "has_round", toType: "round", toId: 1 }
   });
+  await request("tools/call", {
+    name: "proteus_link_entities",
+    arguments: { root: tmpRoot, fromType: "round", fromId: 1, relation: "covers", toType: "surface", toId: 1 }
+  });
+  const pathResult = await request("tools/call", {
+    name: "proteus_query_path",
+    arguments: { root: tmpRoot, fromType: "campaign", fromId: 1, toType: "surface", maxDepth: 3 }
+  });
+  const pathPayload = JSON.parse(String(pathResult.content?.[0]?.text ?? "{}"));
+  const twoHopPath = (pathPayload.paths ?? []).find(
+    (candidate) => candidate.depth === 2 && candidate.nodes?.at(-1)?.type === "surface"
+  );
+  if (!twoHopPath) {
+    throw new Error("proteus_query_path did not reconstruct the campaign -> round -> surface chain");
+  }
   const suppliedPlan = await request("tools/call", {
     name: "proteus_plan_round",
     arguments: {

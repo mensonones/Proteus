@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- Multi-hop path search over the memory graph: the new `proteus_query_path` MCP
+  tool walks the recorded `entity_links` from a start entity (branch, surface,
+  evidence, gate, decision, ...) up to a few hops and returns the connecting
+  paths, optionally only those ending at a given entity type. Where single-hop
+  `listEntityLinks` answers "what touches this node", this answers "how does this
+  node connect to that one" — reconstructing exploit chains the links already
+  imply. Wired into the `chaining` skill so Loom traverses recorded paths instead
+  of only listing one-hop links. Traversal is depth-capped (default 3, max 6) and
+  follows links both ways unless `directed` is set. Local SQLite/JS BFS — no graph
+  DB dependency.
+
 ## 2.2.0 - 2026-08-18
 
 ### Added

@@ -397,6 +397,7 @@ proteus_query_duplicates
 proteus_query_memory
 proteus_query_similar
 proteus_query_surfaces
+proteus_query_path
 proteus_query_revisit
 proteus_list_records
 proteus_get_record

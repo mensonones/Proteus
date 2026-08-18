@@ -1507,6 +1507,47 @@ const tools: ToolDefinition[] = [
     description: "Export reusable global learnings to Markdown.",
     inputSchema: schema({ outPath: stringProp("Optional output path.") }, []),
     handler: ({ outPath }) => withGlobalDb((globalDb) => ({ path: globalDb.exportMarkdown(maybeStr(outPath)) }))
+  },
+  {
+    name: "proteus_update_global_learning",
+    title: "Refine Global Learning",
+    description:
+      "Refine an existing global learning in place instead of adding a near-duplicate: correct its fields, adjust confidence as re-use confirms or weakens it, or retire it when superseded. This closes the learning loop so global memory improves rather than only growing.",
+    inputSchema: schema(
+      {
+        id: numberProp("Id of the learning to refine (the G-id from query results)."),
+        title: stringProp("Optional corrected title."),
+        body: stringProp("Optional replacement body."),
+        scope: stringProp("Optional corrected scope."),
+        category: stringProp("Optional corrected category."),
+        tags: arrayProp("Optional replacement tags."),
+        sourceTarget: stringProp("Optional corrected source target."),
+        confidence: numberProp("Optional absolute confidence 0..1 (wins over confidenceDelta)."),
+        confidenceDelta: numberProp("Optional confidence nudge, e.g. +0.1 when re-use confirmed it, -0.2 when it partly failed."),
+        status: stringProp("Set to 'retired' to supersede without deleting, or 'active' to reinstate."),
+        note: stringProp("Optional short refinement note appended to the body with a timestamp.")
+      },
+      ["id"]
+    ),
+    handler: (input) =>
+      withGlobalDb((globalDb) => {
+        const statusInput = maybeStr(input.status);
+        const status = statusInput === "retired" || statusInput === "active" ? statusInput : undefined;
+        const row = globalDb.refineLearning({
+          id: num(input.id, 0),
+          title: maybeStr(input.title),
+          body: maybeStr(input.body),
+          scope: maybeStr(input.scope),
+          category: maybeStr(input.category),
+          tags: input.tags === undefined ? undefined : stringArray(input.tags),
+          sourceTarget: maybeStr(input.sourceTarget),
+          confidence: typeof input.confidence === "number" ? (input.confidence as number) : undefined,
+          confidenceDelta: typeof input.confidenceDelta === "number" ? (input.confidenceDelta as number) : undefined,
+          status,
+          note: maybeStr(input.note)
+        });
+        return row ? { ok: true, learning: row } : { ok: false, error: `no global learning with id ${num(input.id, 0)}` };
+      })
   }
 ];
 

@@ -23,7 +23,13 @@ campaign memory, but precise enough to steer future decisions.
    couplings, docs/implementation drift, or failed assumptions.
 5. Name pivots explicitly. A pivot should say what new fact changed the plan.
 6. Choose one next high-ROI move. Avoid vague "continue analysis" language.
-7. Include a contract signature that states how dedupe, expected behavior,
+7. Consolidate global memory (the learning-loop nudge). Distill any durable,
+   reusable lesson from this stretch into global learnings: query for a near
+   match first, then refine the existing one with `proteus_update_global_learning`
+   (adjust confidence, correct, or retire a superseded/contradicted one) rather
+   than adding a duplicate; record a new learning only when nothing covers it.
+   Keep target-specific facts in campaign memory, not global learnings.
+8. Include a contract signature that states how dedupe, expected behavior,
    attacker model, and anti-slop checks were maintained.
 
 ## Anti-Patterns
@@ -58,6 +64,13 @@ Required output:
   "pivots": [],
   "scoreChanges": [],
   "contextToPersist": [],
+  "globalLearningsConsolidated": [
+    {
+      "action": "recorded|refined|retired",
+      "id": "G-id when refining/retiring",
+      "note": "what durable lesson changed and why"
+    }
+  ],
   "nextHighRoiMove": "...",
   "recordsToLink": [],
   "contractSignature": {}

@@ -158,6 +158,7 @@ try {
     "proteus_lab_create",
     "proteus_record_global_learning",
     "proteus_query_global_learnings",
+    "proteus_update_global_learning",
     "proteus_export_global_learnings"
   ]) {
     if (!toolNames.includes(expectedTool)) {
@@ -852,7 +853,7 @@ try {
   if (!String(roles.content?.[0]?.text ?? "").includes("Generalist") || !String(roles.content?.[0]?.text ?? "").includes("Argus")) {
     throw new Error("proteus_roles did not return role definitions");
   }
-  await request("tools/call", {
+  const recordedLearning = await request("tools/call", {
     name: "proteus_record_global_learning",
     arguments: {
       root: tmpRoot,
@@ -869,6 +870,29 @@ try {
   });
   if (!String(globalLearning.content?.[0]?.text ?? "").includes("MCP global learning")) {
     throw new Error("proteus_query_global_learnings did not return expected learning");
+  }
+  const recordedLearningId = JSON.parse(String(recordedLearning.content?.[0]?.text ?? "{}")).id;
+  const refinedLearning = await request("tools/call", {
+    name: "proteus_update_global_learning",
+    arguments: { id: recordedLearningId, confidenceDelta: 0.2, note: "confirmed by smoke run" }
+  });
+  const refinedPayload = JSON.parse(String(refinedLearning.content?.[0]?.text ?? "{}"));
+  if (!refinedPayload.ok || Math.abs(refinedPayload.learning?.confidence - 0.9) > 1e-9) {
+    throw new Error("proteus_update_global_learning did not refine confidence as expected");
+  }
+  const retiredLearning = await request("tools/call", {
+    name: "proteus_update_global_learning",
+    arguments: { id: recordedLearningId, status: "retired" }
+  });
+  if (!JSON.parse(String(retiredLearning.content?.[0]?.text ?? "{}")).ok) {
+    throw new Error("proteus_update_global_learning did not retire the learning");
+  }
+  const afterRetire = await request("tools/call", {
+    name: "proteus_query_global_learnings",
+    arguments: { text: "MCP", scope: "smoke" }
+  });
+  if (String(afterRetire.content?.[0]?.text ?? "").includes("MCP global learning")) {
+    throw new Error("retired global learning should not appear in default queries");
   }
   const coverage = await request("tools/call", {
     name: "proteus_query_duplicates",

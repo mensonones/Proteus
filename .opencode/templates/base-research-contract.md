@@ -39,6 +39,31 @@ Every Proteus role and skill must continuously follow this contract.
 - Track kill conditions from the beginning and kill weak hypotheses early.
 - Reassess ROI after new evidence.
 
+## Learning Loop
+
+Global memory must get sharper with use, not just larger. Every role runs a
+closed loop around its work so reusable knowledge compounds across campaigns and
+targets.
+
+- **Recall first.** Before starting a front, query reusable memory
+  (`proteus_query_global_learnings`, scoped to the surface, family, and target
+  type) and apply what is relevant. State briefly which learnings you reused or
+  why none applied. Do not re-derive a playbook that memory already holds.
+- **Refine, do not duplicate.** After a front, distill at most one or two
+  *durable, reusable* learnings — heuristics, validation patterns, anti-patterns,
+  tooling notes, targeting strategy. Before recording a new one, search for an
+  existing near-match; if it exists, refine it with
+  `proteus_update_global_learning` (correct the body, adjust confidence, or add a
+  note) instead of adding a near-duplicate. Record a brand-new learning only when
+  nothing covers it.
+- **Confidence is a signal, not a decoration.** Raise a learning's confidence
+  when re-use confirmed it; lower it, or retire it (`status: "retired"`), when it
+  failed, was superseded, or proved target-specific.
+- **Keep learnings reusable.** Global learnings are cross-target playbook
+  material, not campaign findings. Target-specific evidence, hypotheses, and
+  killed paths belong in campaign memory (`proteus_record_*`), not in global
+  learnings.
+
 ## Network Operations
 
 Tor must be ephemeral — installed on demand, bootstrapped as the coordinator's

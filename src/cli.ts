@@ -1204,11 +1204,34 @@ function cmdLearn(db: ProteusDb, subcommand: string | undefined, parsed: ParsedA
       console.log(`Wrote ${globalDb.exportMarkdown(getString(parsed, "out"))}`);
       return;
     }
+
+    if (subcommand === "refine") {
+      const statusInput = getString(parsed, "status");
+      const status = statusInput === "retired" || statusInput === "active" ? statusInput : undefined;
+      const row = globalDb.refineLearning({
+        id: requiredNumber(parsed, "id"),
+        title: getString(parsed, "title"),
+        body: getString(parsed, "body"),
+        scope: getString(parsed, "scope"),
+        category: getString(parsed, "category"),
+        tags: getString(parsed, "tags") === undefined ? undefined : splitList(getString(parsed, "tags") ?? ""),
+        sourceTarget: getString(parsed, "source-target"),
+        confidence: getNumber(parsed, "confidence"),
+        confidenceDelta: getNumber(parsed, "confidence-delta"),
+        status,
+        note: getString(parsed, "note")
+      });
+      if (!row) {
+        throw new Error(`No global learning with id ${requiredNumber(parsed, "id")}`);
+      }
+      console.log(`Refined global learning G${row.id} (confidence=${row.confidence.toFixed(2)}, status=${row.status})`);
+      return;
+    }
   } finally {
     globalDb.close();
   }
 
-  throw new Error("learn requires one of: add, query, export");
+  throw new Error("learn requires one of: add, query, export, refine");
 }
 
 function requireInitialized(db: ProteusDb): void {

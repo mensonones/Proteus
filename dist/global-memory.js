@@ -36,6 +36,59 @@ class GlobalMemoryDb {
         this.indexFts(id, renderSearchContent({ ...learning, sourceTarget: learning.sourceTarget ?? "" }));
         return id;
     }
+    // Refine an existing learning in place: correct fields, adjust confidence, or
+    // retire it. Returns the updated row, or null if the id does not exist. This
+    // is what turns append-only storage into a self-improving loop — a re-used
+    // learning gets sharper (or retired) instead of spawning a near-duplicate.
+    refineLearning(refinement) {
+        const existing = this.getLearning(refinement.id);
+        if (!existing)
+            return null;
+        let confidence = existing.confidence;
+        if (typeof refinement.confidence === "number") {
+            confidence = refinement.confidence;
+        }
+        else if (typeof refinement.confidenceDelta === "number") {
+            confidence = existing.confidence + refinement.confidenceDelta;
+        }
+        confidence = Math.max(0, Math.min(1, confidence));
+        let body = refinement.body ?? existing.body;
+        if (refinement.note && refinement.note.trim()) {
+            const stamp = nowIso();
+            body = `${body}\n\n[refined ${stamp}] ${refinement.note.trim()}`;
+        }
+        const merged = {
+            category: refinement.category ?? existing.category,
+            scope: refinement.scope ?? existing.scope,
+            title: refinement.title ?? existing.title,
+            body,
+            tags: refinement.tags ?? existing.tags,
+            sourceTarget: refinement.sourceTarget ?? existing.sourceTarget,
+            confidence,
+            status: refinement.status ?? existing.status
+        };
+        this.db
+            .prepare(`UPDATE global_learnings
+         SET category = ?, scope = ?, title = ?, body = ?, tags_json = ?,
+             source_target = ?, confidence = ?, status = ?, updated_at = ?
+         WHERE id = ?`)
+            .run(merged.category, merged.scope, merged.title, merged.body, json(merged.tags), merged.sourceTarget, merged.confidence, merged.status, nowIso(), refinement.id);
+        this.db.prepare("DELETE FROM global_learning_fts WHERE learning_id = ?").run(refinement.id);
+        this.indexFts(refinement.id, renderSearchContent({
+            category: merged.category,
+            scope: merged.scope,
+            title: merged.title,
+            body: merged.body,
+            tags: merged.tags,
+            confidence: merged.confidence,
+            sourceTarget: merged.sourceTarget
+        }));
+        return this.getLearning(refinement.id);
+    }
+    getLearning(id) {
+        const row = this.db.prepare("SELECT * FROM global_learnings WHERE id = ?").get(id);
+        return row ? toGlobalLearningRow(row) : null;
+    }
     queryLearnings(query) {
         const limit = Math.max(1, Math.min(query.limit ?? 20, 100));
         const rows = query.text?.trim()
@@ -52,6 +105,7 @@ class GlobalMemoryDb {
                 .all(limit * 4);
         return rows
             .map(toGlobalLearningRow)
+            .filter((row) => (query.includeRetired ? true : row.status !== "retired"))
             .filter((row) => matchesFilter(row, query))
             .slice(0, limit);
     }
@@ -75,6 +129,7 @@ class GlobalMemoryDb {
         tags_json TEXT NOT NULL,
         source_target TEXT NOT NULL,
         confidence REAL NOT NULL,
+        status TEXT NOT NULL DEFAULT 'active',
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL
       );
@@ -84,6 +139,14 @@ class GlobalMemoryDb {
         content
       );
     `);
+        // Additive migration for databases created before the status column existed.
+        if (!this.hasColumn("global_learnings", "status")) {
+            this.db.exec("ALTER TABLE global_learnings ADD COLUMN status TEXT NOT NULL DEFAULT 'active';");
+        }
+    }
+    hasColumn(table, column) {
+        const rows = this.db.prepare(`PRAGMA table_info(${table})`).all();
+        return rows.some((row) => String(row.name) === column);
     }
     indexFts(learningId, content) {
         this.db
@@ -131,6 +194,7 @@ function toGlobalLearningRow(row) {
         tags: JSON.parse(String(row.tags_json)),
         sourceTarget: String(row.source_target ?? ""),
         confidence: Number(row.confidence),
+        status: String(row.status ?? "active"),
         createdAt: String(row.created_at),
         updatedAt: String(row.updated_at)
     };

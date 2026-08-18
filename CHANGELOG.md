@@ -1,5 +1,44 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- Closed global-learning loop so reusable memory improves with use instead of
+  only growing. New `proteus_update_global_learning` MCP tool and `proteus learn
+  refine` CLI subcommand refine a learning in place — adjust confidence (delta or
+  absolute, clamped 0..1), correct fields, or retire a superseded one via a new
+  `status` column (additive, idempotent migration; retired rows leave normal
+  queries but stay auditable). The base research contract gains a Learning Loop
+  section and the checkpoint skill a consolidation step, so roles recall relevant
+  learnings before a front and refine (not duplicate) after it.
+- Shared control planes as a high-ROI surface-selection lens in the generalist
+  mapper: a back-office / admin / integration backend serving many downstream
+  tenants is weighted above per-tenant surfaces. `web-intel` recognizes curated
+  aggregators as a secondary, time-sensitive pivot-discovery source.
+
+### Changed
+
+- Recon and target analysis are read-only. Live-target mapping and enumeration
+  use only safe methods (`GET`/`HEAD`/`OPTIONS`); state-changing probes are
+  deferred to a deliberately promoted validation phase. Enforced in the base
+  research contract (Stealth and Rate Discipline), the `web-research` skill, and
+  the `proteus-generalist` and `proteus-cicada` agents.
+- Prompts no longer suggest exporting `ALL_PROXY`/`HTTP_PROXY`/`HTTPS_PROXY`
+  (which conflict with proxychains); routing is standardized on `proxychains4`.
+
+### Fixed
+
+- Tor enforcement no longer bricks the host on every run. The kernel DROP-all
+  lockdown is now opt-in and OFF by default and was removed from the mandatory
+  `/proteus` bootstrap step. `tor-ephemeral.sh enforce` refuses to lock down
+  unless Tor is confirmed working and its uid is resolved, and auto-relaxes if
+  host connectivity breaks after the rules go live (fails open on the host).
+  Recovery for a stuck machine: `tor-ephemeral.sh relax`.
+- Integration surface test accounts for the OpenCode command's `plugins/proteus/
+  scripts` -> `.opencode/scripts` path rewrite instead of asserting byte-identical
+  equality with the canonical command (pre-existing failure).
+
 ## 2.1.9 - 2026-08-01
 
 ### Changed

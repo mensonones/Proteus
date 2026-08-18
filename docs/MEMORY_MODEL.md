@@ -371,9 +371,17 @@ body
 tags_json
 source_target
 confidence
+status
 created_at
 updated_at
 ```
+
+`status` is `active` by default. A learning is refined in place as it is re-used
+— its `confidence` is nudged up or down, its body corrected — instead of
+spawning a near-duplicate, and is set to `retired` when superseded. Retired
+learnings are excluded from normal queries but remain in the table for audit.
+This is the closed learning loop the roles follow (recall before a front, refine
+after, consolidate at checkpoint).
 
 `category` values:
 
@@ -544,6 +552,7 @@ proteus_export
 proteus_lab_create
 proteus_record_global_learning
 proteus_query_global_learnings
+proteus_update_global_learning
 proteus_export_global_learnings
 ```
 

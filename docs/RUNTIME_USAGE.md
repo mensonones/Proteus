@@ -285,6 +285,28 @@ When a round is planned, Proteus attempts to pull relevant global learnings into
 the round plan from the objective and target contract. These learnings guide
 strategy; they are not evidence for a target-specific vulnerability.
 
+### Refine, don't duplicate (the learning loop)
+
+Global memory should get sharper with use, not just larger. Instead of recording
+a near-duplicate every time a learning re-appears, refine the existing one:
+adjust its confidence as re-use confirms or weakens it, correct its body, or
+retire it when superseded. Retired learnings drop out of normal queries but stay
+auditable.
+
+```powershell
+# raise confidence after a learning was confirmed again, with a note
+node dist/cli.js learn refine --id 12 --confidence-delta 0.1 --note "confirmed on target X"
+# correct the body and lower confidence after it partly failed
+node dist/cli.js learn refine --id 12 --body "Refined wording..." --confidence-delta -0.2
+# supersede without deleting
+node dist/cli.js learn refine --id 12 --status retired
+```
+
+This closes the loop the roles follow per the base research contract: recall
+relevant learnings before a front, then refine (not duplicate) after it, and
+consolidate at each checkpoint. `--confidence` sets an absolute 0..1 value and
+wins over `--confidence-delta`.
+
 ## Create A Lab
 
 ```powershell
@@ -391,6 +413,7 @@ proteus_export
 proteus_lab_create
 proteus_record_global_learning
 proteus_query_global_learnings
+proteus_update_global_learning
 proteus_export_global_learnings
 ```
 
